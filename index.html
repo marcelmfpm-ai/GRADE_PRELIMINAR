@@ -159,6 +159,11 @@ tr.multi-row .cal-entry{min-height:unset;padding:4px 7px;gap:1px}
 .dd-exportbar{display:flex;align-items:center;gap:8px;justify-content:flex-end;margin:0 0 10px 0;flex-wrap:wrap}
 .dd-export-btn{border:1.5px solid #1c2b4a;background:#1c2b4a;color:#fff;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:900;letter-spacing:.25px;cursor:pointer;font-family:inherit;box-shadow:0 2px 0 rgba(0,0,0,.08)}
 .dd-export-btn:hover{background:#263a63}
+.dd-export-btn:disabled{opacity:.6;cursor:not-allowed}
+.dd-github-btn{background:#2ea44f;border-color:#2ea44f}
+.dd-github-btn:hover:not(:disabled){background:#22863a;border-color:#22863a}
+.dd-token-btn{background:#555;border-color:#555;padding:8px 10px;font-size:13px}
+.dd-token-btn:hover{background:#333;border-color:#333}
 .dd-export-hint{font-size:10px;color:#888}
 @media(max-width:900px){.dd-layout{grid-template-columns:1fr}.dd-layout.dd-backlog-min{grid-template-columns:1fr}.dd-backlog{position:relative;top:auto;max-height:none}}
 
@@ -6022,20 +6027,31 @@ function markMultiRows() {
     }
     bar.id = 'dd-exportbar';
     bar.className = 'dd-exportbar';
-    bar.innerHTML = '<span class="dd-export-hint">Editar: duplo clique no card. Copiar/colar: selecione o card e use Ctrl+C/Ctrl+V. Excluir: botão × ou tecla Delete.</span><button type="button" id="dd-export-csv-btn" class="dd-export-btn">GERAR CSV</button><button type="button" id="dd-export-xlsx-btn" class="dd-export-btn">GERAR XLSX</button><button type="button" id="dd-export-html-btn" class="dd-export-btn">GERAR HTML ATUALIZADO</button>';
+    bar.innerHTML = '<span class="dd-export-hint">Editar: duplo clique no card. Copiar/colar: selecione o card e use Ctrl+C/Ctrl+V. Excluir: botão × ou tecla Delete.</span><button type="button" id="dd-export-csv-btn" class="dd-export-btn">GERAR CSV</button><button type="button" id="dd-export-xlsx-btn" class="dd-export-btn">GERAR XLSX</button><button type="button" id="dd-export-html-btn" class="dd-export-btn">GERAR HTML ATUALIZADO</button><button type="button" id="dd-github-btn" class="dd-export-btn dd-github-btn">SALVAR NO GITHUB</button><button type="button" id="dd-token-btn" class="dd-export-btn dd-token-btn" title="Configurar token GitHub">⚙</button>';
     const btn = bar.querySelector('#dd-export-html-btn');
     if(btn) btn.onclick = exportCurrentHtml;
     const csvBtn = bar.querySelector('#dd-export-csv-btn');
     if(csvBtn) csvBtn.onclick = exportCalendarCSV;
     const xlsxBtn = bar.querySelector('#dd-export-xlsx-btn');
     if(xlsxBtn) xlsxBtn.onclick = exportCalendarXLSX;
+    const ghBtn = bar.querySelector('#dd-github-btn');
+    if(ghBtn) ghBtn.onclick = saveToGithub;
+    const tokenBtn = bar.querySelector('#dd-token-btn');
+    if(tokenBtn) tokenBtn.onclick = configureGithubToken;
   }
 
-  function exportCurrentHtml(){
+  function buildCleanHtml(){
     finishEditing();
     saveCalendarLayout();
     const currentLayout = captureCalendarLayout();
     const clone = document.documentElement.cloneNode(true);
+
+    // Remove conteúdo injetado por extensões de navegador
+    clone.querySelectorAll('#in-page-channel-node-id').forEach(el=>el.remove());
+    clone.querySelectorAll('style').forEach(el=>{
+      if(el.textContent.includes('trust-wallet')||el.textContent.includes('trust-hide')||el.textContent.includes('slide-in-one-tap')) el.remove();
+    });
+    clone.querySelectorAll('[data-channel-name]').forEach(el=>el.remove());
 
     clone.querySelectorAll('.dd-over,.dd-dragging,.dd-selected,.dd-zone-selected,.editing').forEach(el=>{
       el.classList.remove('dd-over','dd-dragging','dd-selected','dd-zone-selected','editing');
@@ -6057,7 +6073,11 @@ function markMultiRows() {
     exportedScript.textContent = 'window.__EXPORTED_CALENDAR_LAYOUT__ = ' + JSON.stringify(currentLayout) + ';';
     clone.querySelector('body').appendChild(exportedScript);
 
-    const html = '<!DOCTYPE html>\n' + clone.outerHTML;
+    return '<!DOCTYPE html>\n' + clone.outerHTML;
+  }
+
+  function exportCurrentHtml(){
+    const html = buildCleanHtml();
     const blob = new Blob([html], {type:'text/html;charset=utf-8'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -6068,6 +6088,64 @@ function markMultiRows() {
     a.click();
     a.remove();
     setTimeout(()=>URL.revokeObjectURL(url), 1000);
+  }
+
+  function configureGithubToken(){
+    const current = localStorage.getItem('gh_token');
+    const msg = current
+      ? 'Token atual salvo. Cole um novo para substituir (ou cancele para manter o atual):'
+      : 'Cole seu GitHub Personal Access Token (será salvo só neste navegador):';
+    const token = prompt(msg);
+    if(token && token.trim()){
+      localStorage.setItem('gh_token', token.trim());
+      alert('Token salvo com sucesso!');
+    }
+  }
+
+  async function saveToGithub(){
+    let token = localStorage.getItem('gh_token');
+    if(!token){
+      token = prompt('Cole seu GitHub Personal Access Token para salvar direto no repositório:');
+      if(!token || !token.trim()) return;
+      localStorage.setItem('gh_token', token.trim());
+    }
+    token = token.trim();
+
+    const ghBtn = document.getElementById('dd-github-btn');
+    const originalText = ghBtn ? ghBtn.textContent : '';
+    if(ghBtn){ ghBtn.textContent = 'ENVIANDO...'; ghBtn.disabled = true; }
+
+    try{
+      const owner = 'marcelmfpm-ai';
+      const repo  = 'GRADE_PRELIMINAR';
+      const path  = 'index.html';
+      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+      const headers = { Authorization: `token ${token}`, Accept: 'application/vnd.github+json' };
+
+      const metaRes = await fetch(apiUrl, { headers });
+      if(!metaRes.ok) throw new Error(`Erro ao acessar repositório (${metaRes.status}). Verifique o token.`);
+      const meta = await metaRes.json();
+
+      const html = buildCleanHtml();
+      const content = btoa(unescape(encodeURIComponent(html)));
+
+      const putRes = await fetch(apiUrl, {
+        method: 'PUT',
+        headers: { ...headers, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: 'Atualizar grade via app', content, sha: meta.sha })
+      });
+
+      if(!putRes.ok){
+        const err = await putRes.json().catch(()=>({}));
+        throw new Error(err.message || `Erro ao salvar (${putRes.status})`);
+      }
+
+      if(ghBtn){ ghBtn.textContent = '✓ SALVO NO GITHUB!'; ghBtn.disabled = false; }
+      setTimeout(()=>{ if(ghBtn) ghBtn.textContent = originalText; }, 4000);
+    } catch(e){
+      alert('Erro ao salvar no GitHub:\n' + e.message);
+      if(ghBtn){ ghBtn.textContent = originalText; ghBtn.disabled = false; }
+    }
   }
 
   // Períodos consecutivos conhecidos: fim de um → início do próximo
