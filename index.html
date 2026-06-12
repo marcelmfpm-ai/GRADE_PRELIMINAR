@@ -6236,7 +6236,7 @@ function markMultiRows() {
     const rows = [['cargo','codigo','turma','data','horaInicio','horaFim'],
       ...data.map(r=>[r.cargo,r.codigo,r.turma,r.data,r.horaInicio,r.horaFim])];
 
-    const csv = rows.map(r => r.map(v => '"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');
+    const csv = rows.map(r => r.map(v => '"'+String(v).replace(/"/g,'""')+'"').join(';')).join('\r\n');
     const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8'});
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -6279,7 +6279,7 @@ function markMultiRows() {
             const cargo = dashIdx>=0 ? turmaFull.slice(0,dashIdx) : turmaFull;
             const turma = dashIdx>=0 ? turmaFull.slice(dashIdx+1) : turmaFull;
             let codigo = '';
-            if(codSpan){ const cl=codSpan.cloneNode(true); cl.querySelectorAll('span').forEach(s=>s.remove()); codigo=cl.textContent.trim(); }
+            if(codSpan){ const cl=codSpan.cloneNode(true); cl.querySelectorAll('span').forEach(s=>s.remove()); codigo=cl.textContent.trim().replace(/\.(\d)(?!\d)/,'.0$1'); }
             rows.push({cargo, codigo, turma, data, horaInicio, horaFim});
           });
         });

@@ -1,0 +1,28 @@
+name: Gerar CSV do Calendário
+
+on:
+  push:
+    branches: [main]
+    paths: [index.html]
+
+jobs:
+  generate-csv:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Instalar dependências
+        run: npm install jsdom
+      - name: Gerar CSV
+        run: node generate-csv.js
+      - name: Commit CSV
+        run: |
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add calendario.csv
+          git diff --staged --quiet || git commit -m "Auto: atualizar calendario.csv"
+          git push
