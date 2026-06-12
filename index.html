@@ -6102,6 +6102,21 @@ function markMultiRows() {
     }
   }
 
+  function fallbackDownloadAndUpload(){
+    const html = buildCleanHtml();
+    const blob = new Blob([html], {type:'text/html;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'index.html';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url), 1000);
+    setTimeout(()=>window.open('https://github.com/marcelmfpm-ai/GRADE_PRELIMINAR/upload/main','_blank'), 600);
+    alert('A API do GitHub não está acessível nesta rede.\n\nO arquivo "index.html" foi baixado e a página de upload do GitHub abriu numa nova aba.\n\n➜ Arraste o arquivo baixado para a área de upload\n➜ Clique em "Commit changes"');
+  }
+
   async function saveToGithub(){
     let token = localStorage.getItem('gh_token');
     if(!token){
@@ -6113,16 +6128,30 @@ function markMultiRows() {
 
     const ghBtn = document.getElementById('dd-github-btn');
     const originalText = ghBtn ? ghBtn.textContent : '';
-    if(ghBtn){ ghBtn.textContent = 'ENVIANDO...'; ghBtn.disabled = true; }
+    if(ghBtn){ ghBtn.textContent = 'VERIFICANDO...'; ghBtn.disabled = true; }
+
+    const owner = 'marcelmfpm-ai';
+    const repo  = 'GRADE_PRELIMINAR';
+    const path  = 'index.html';
+    const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+    const headers = { Authorization: `token ${token}`, Accept: 'application/vnd.github+json' };
+
+    // Testa conectividade com timeout de 6s antes de tentar o upload
+    let metaRes;
+    try{
+      const ctrl = new AbortController();
+      const tid = setTimeout(()=>ctrl.abort(), 6000);
+      metaRes = await fetch(apiUrl, { headers, signal: ctrl.signal });
+      clearTimeout(tid);
+    } catch(e){
+      if(ghBtn){ ghBtn.textContent = originalText; ghBtn.disabled = false; }
+      fallbackDownloadAndUpload();
+      return;
+    }
+
+    if(ghBtn) ghBtn.textContent = 'ENVIANDO...';
 
     try{
-      const owner = 'marcelmfpm-ai';
-      const repo  = 'GRADE_PRELIMINAR';
-      const path  = 'index.html';
-      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-      const headers = { Authorization: `token ${token}`, Accept: 'application/vnd.github+json' };
-
-      const metaRes = await fetch(apiUrl, { headers });
       if(!metaRes.ok) throw new Error(`Erro ao acessar repositório (${metaRes.status}). Verifique o token.`);
       const meta = await metaRes.json();
 
