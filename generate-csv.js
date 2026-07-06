@@ -89,6 +89,11 @@ function mergeConsecutiveRows(data) {
 }
 
 const data = mergeConsecutiveRows(extractCalendarRows());
+data.sort((a, b) => {
+  const da = a.data.split('/').reverse().join('-');
+  const db = b.data.split('/').reverse().join('-');
+  return da !== db ? da.localeCompare(db) : a.horaInicio.localeCompare(b.horaInicio);
+});
 const rows = [
   ['cargo', 'codigo', 'turma', 'data', 'horaInicio', 'horaFim'],
   ...data.map(r => [r.cargo, r.codigo, r.turma, r.data, r.horaInicio, r.horaFim])
