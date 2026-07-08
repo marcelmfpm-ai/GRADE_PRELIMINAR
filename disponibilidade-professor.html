@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta content="width=device-width,initial-scale=1.0" name="viewport">
+<title>Consulta Aulas — Grade APC CFP2/2026</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700;900&amp;display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+:root{
+  --page:#f9f9f7; --surface-1:#fcfcfb;
+  --text-primary:#0b0b0b; --text-secondary:#52514e; --text-muted:#898781;
+  --gridline:#e1e0d9; --baseline:#c3c2b7; --border:rgba(11,11,11,0.10);
+  --navy:#1c2b4a; --seq:#2a78d6;
+  --epf:#3a9475; --dpf:#5b8ec4; --ppf:#d4a843; --pcf:#c96b5a;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Source Sans 3','Source Sans Pro',system-ui,-apple-system,sans-serif;background:var(--page);color:var(--text-primary);font-size:13px;line-height:1.5}
+.header{background:var(--navy);color:#fff;padding:20px 24px}
+.header-title{font-size:22px;font-weight:900;letter-spacing:.3px}
+.header-sub{font-size:12px;color:rgba(255,255,255,.75);margin-top:4px}
+.main{max-width:980px;margin:0 auto;padding:20px 20px 48px}
+
+.card{background:var(--surface-1);border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin-bottom:16px}
+.card-titulo{font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px}
+
+.filtros{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end}
+.filtro-campo{display:flex;flex-direction:column;gap:5px}
+.filtro-campo label{font-size:11px;font-weight:700;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.4px}
+.filtro-campo input,.filtro-campo select{font-size:13px;padding:8px 10px;border:1.5px solid var(--border);border-radius:7px;background:var(--page);color:var(--text-primary);font-weight:600;font-family:inherit}
+.btn-buscar{padding:9px 22px;font-size:13px;font-weight:900;border:none;border-radius:7px;background:var(--navy);color:#fff;cursor:pointer;letter-spacing:.3px}
+.btn-buscar:hover{opacity:.9}
+.filtro-hint{font-size:11px;color:var(--text-muted);margin-top:10px}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.stat{background:var(--surface-1);border:1px solid var(--border);border-radius:9px;padding:14px 12px;text-align:center}
+.stat-val{font-size:26px;font-weight:700;color:var(--navy);line-height:1;font-variant-numeric:proportional-nums}
+.stat-lab{font-size:9px;color:var(--text-muted);margin-top:5px;text-transform:uppercase;letter-spacing:.5px}
+
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{background:var(--page);padding:7px 10px;text-align:left;font-weight:700;font-size:10px;color:var(--text-muted);border-bottom:1.5px solid var(--gridline);white-space:nowrap;text-transform:uppercase;letter-spacing:.4px}
+td{padding:7px 10px;border-bottom:1px solid var(--gridline);vertical-align:middle}
+td.num{text-align:right;font-variant-numeric:tabular-nums;font-weight:700;color:var(--navy)}
+tr:hover td{background:var(--page)}
+.bdg{display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;white-space:nowrap;color:#fff}
+.bdg.epf{background:var(--epf)}.bdg.dpf{background:var(--dpf)}.bdg.ppf{background:var(--ppf)}.bdg.pcf{background:var(--pcf)}
+
+.heatmap-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px}
+.view-toggle{display:flex;gap:6px}
+.view-toggle button{font-size:11px;font-weight:700;padding:6px 12px;border:1.5px solid var(--border);border-radius:7px;background:var(--page);color:var(--text-secondary);cursor:pointer;font-family:inherit}
+.view-toggle button.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+
+.legenda-seq{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text-muted)}
+.legenda-seq .sw{width:13px;height:13px;border-radius:3px;display:inline-block;border:1px solid var(--border)}
+
+.months-wrap{display:flex;flex-direction:column;gap:22px}
+.month-block{}
+.month-title{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px}
+.month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.dow{font-size:9px;font-weight:700;color:var(--text-muted);text-align:center;padding-bottom:4px;text-transform:uppercase}
+.day-cell{position:relative;aspect-ratio:1/1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text-primary);cursor:default;border:1px solid var(--border)}
+.day-cell.empty{visibility:hidden}
+.day-cell.out-range{color:var(--text-muted);opacity:.35;border-style:dashed}
+.day-cell.has-data{cursor:pointer;border-color:transparent}
+.day-cell.b1{background:color-mix(in srgb, var(--seq) 22%, var(--surface-1))}
+.day-cell.b2{background:color-mix(in srgb, var(--seq) 48%, var(--surface-1))}
+.day-cell.b3{background:color-mix(in srgb, var(--seq) 75%, var(--surface-1))}
+.day-cell.b4{background:var(--seq);color:#fff}
+
+.tooltip{position:fixed;z-index:200;background:var(--navy);color:#fff;border-radius:8px;padding:10px 12px;font-size:11px;line-height:1.5;max-width:280px;box-shadow:0 8px 24px rgba(0,0,0,.3);pointer-events:none;opacity:0;transition:opacity .1s}
+.tooltip.show{opacity:1}
+.tooltip-date{font-weight:900;margin-bottom:6px;font-size:12px}
+.tooltip-row{padding:3px 0;border-top:1px solid rgba(255,255,255,.15)}
+.tooltip-row:first-of-type{border-top:none}
+.tooltip-cod{font-weight:700}
+
+.empty-state{text-align:center;padding:30px;color:var(--text-muted);font-size:12px}
+.actions-bar{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:4px}
+.action-btn{padding:9px 18px;font-size:12px;font-weight:900;letter-spacing:.25px;border:1.5px solid var(--navy);border-radius:8px;background:var(--surface-1);color:var(--navy);cursor:pointer;font-family:inherit}
+.action-btn:hover{background:var(--page)}
+.action-btn-primary{background:var(--navy);color:#fff}
+.action-btn-primary:hover{opacity:.9;background:var(--navy)}
+.action-btn.copiado{background:#2e7560;border-color:#2e7560;color:#fff}
+
+.footer{text-align:center;padding:16px;font-size:10px;color:var(--text-muted)}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title">Consulta Aulas</div>
+  <div class="header-sub">Consulta de aulas por período — Grade APC CFP2/2026</div>
+</div>
+
+<div class="main">
+
+  <div class="card">
+    <div class="card-titulo">Período de disponibilidade</div>
+    <div class="filtros">
+      <div class="filtro-campo">
+        <label for="f-inicio">Data início</label>
+        <input type="date" id="f-inicio">
+      </div>
+      <div class="filtro-campo">
+        <label for="f-fim">Data fim</label>
+        <input type="date" id="f-fim">
+      </div>
+      <div class="filtro-campo">
+        <label for="f-cargo">Cargo</label>
+        <select id="f-cargo">
+          <option value="all">Todos</option>
+          <option value="EPF">EPF</option>
+          <option value="DPF">DPF</option>
+          <option value="PPF">PPF</option>
+          <option value="PCF">PCF</option>
+        </select>
+      </div>
+      <button type="button" class="btn-buscar" id="btn-buscar">Buscar</button>
+    </div>
+    <div class="filtro-hint">Mostra somente aulas a partir da data de hoje — períodos já passados não são exibidos.</div>
+  </div>
+
+  <div id="resultados" style="display:none">
+    <div class="stats">
+      <div class="stat"><div class="stat-val" id="st-total">0</div><div class="stat-lab">Aulas no período</div></div>
+      <div class="stat"><div class="stat-val" id="st-dias">0</div><div class="stat-lab">Dias com aula</div></div>
+      <div class="stat"><div class="stat-val" id="st-codigos">0</div><div class="stat-lab">Códigos distintos</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-titulo">Códigos e descrições das aulas no período</div>
+      <div class="tbl-wrap" style="overflow-x:auto">
+        <table>
+          <thead><tr><th>Cargo</th><th>Código</th><th>Descrição</th><th>Turmas</th><th style="text-align:right">Qtd. sessões</th></tr></thead>
+          <tbody id="tbl-resumo"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="heatmap-head">
+        <div class="card-titulo" style="margin-bottom:0">Calendário do período</div>
+        <div style="display:flex;align-items:center;gap:14px">
+          <div class="legenda-seq">
+            <span>Menos</span>
+            <span class="sw" style="background:color-mix(in srgb, var(--seq) 22%, var(--surface-1))"></span>
+            <span class="sw" style="background:color-mix(in srgb, var(--seq) 48%, var(--surface-1))"></span>
+            <span class="sw" style="background:color-mix(in srgb, var(--seq) 75%, var(--surface-1))"></span>
+            <span class="sw" style="background:var(--seq)"></span>
+            <span>Mais aulas</span>
+          </div>
+          <div class="view-toggle">
+            <button type="button" id="btn-view-cal" class="active">Calendário</button>
+            <button type="button" id="btn-view-tbl">Tabela</button>
+          </div>
+        </div>
+      </div>
+      <div id="months-container" class="months-wrap"></div>
+      <div id="tabela-dias-container" style="display:none;overflow-x:auto">
+        <table>
+          <thead><tr><th>Data</th><th>Dia</th><th style="text-align:right">Qtd. aulas</th></tr></thead>
+          <tbody id="tbl-dias"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="actions-bar">
+      <button type="button" class="action-btn" id="btn-copiar">Copiar</button>
+      <button type="button" class="action-btn" id="btn-compartilhar">Compartilhar</button>
+      <button type="button" class="action-btn action-btn-primary" id="btn-baixar">Download CSV</button>
+      <button type="button" class="action-btn action-btn-primary" id="btn-baixar-pdf">Download PDF</button>
+    </div>
+  </div>
+
+  <div id="vazio" class="empty-state" style="display:none">Nenhuma aula encontrada no período e cargo selecionados.</div>
+
+  <div class="footer">Grade APC CFP2/2026 · dados extraídos do calendário oficial</div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+/* BEGIN_DADOS_AULAS - gerado automaticamente por generate-professor-data.py, não editar manualmente */
+const DADOS_AULAS = [{"cargo":"EPF","codigo":"M1.1","descricao":"Simulação de Atividades de Sobreaviso","turma":"D","data":"02/06/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"EPF","codigo":"M1.1","descricao":"Simulação de Atividades de Sobreaviso","turma":"A","data":"03/06/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"EPF","codigo":"M1.1","descricao":"Simulação de Atividades de Sobreaviso","turma":"B","data":"04/06/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"EPF","codigo":"M1.1","descricao":"Simulação de Atividades de Sobreaviso","turma":"C","data":"05/06/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"EPF","codigo":"M2.1","descricao":"Exerc. Simulado - Levantamento de Endereço - Crimes Eleitorais","turma":"A","data":"08/06/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M2.1","descricao":"Exerc. Simulado - Levantamento de Endereço - Crimes Eleitorais","turma":"D","data":"08/06/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M2.1","descricao":"Exerc. Simulado - Levantamento de Endereço - Crimes Eleitorais","turma":"C","data":"08/06/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"EPF","codigo":"M2.1","descricao":"Exerc. Simulado - Levantamento de Endereço - Crimes Eleitorais","turma":"B","data":"08/06/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M2.1","descricao":"Exerc. Simulado - Levantamento de Endereço - Crimes Eleitorais","turma":"E","data":"09/06/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M2.1","descricao":"Exerc. Simulado - Levantamento de Endereço - Crimes Eleitorais","turma":"F","data":"09/06/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M2.1","descricao":"Exerc. Simulado - Levantamento de Endereço - Crimes Eleitorais","turma":"G","data":"09/06/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"EPF","codigo":"M2.1","descricao":"Exerc. Simulado - Levantamento de Endereço - Crimes Eleitorais","turma":"H","data":"09/06/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"DPF","codigo":"M1.1","descricao":"Simulação de Atividades de Sobreaviso","turma":"A","data":"09/06/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"EPF","codigo":"M2.1","descricao":"Exerc. Simulado - Levantamento de Endereço - Crimes Eleitorais","turma":"I","data":"10/06/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M3.1","descricao":"Entrevista Fonte Humana","turma":"A","data":"10/06/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M3.1","descricao":"Entrevista Fonte Humana","turma":"D","data":"10/06/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"EPF","codigo":"M3.1","descricao":"Entrevista Fonte Humana","turma":"C","data":"10/06/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"DPF","codigo":"M1.1","descricao":"Simulação de Atividades de Sobreaviso","turma":"C","data":"10/06/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"EPF","codigo":"M3.1","descricao":"Entrevista Fonte Humana","turma":"B","data":"11/06/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M3.1","descricao":"Entrevista Fonte Humana","turma":"E","data":"11/06/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M3.1","descricao":"Entrevista Fonte Humana","turma":"F","data":"11/06/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"EPF","codigo":"M3.1","descricao":"Entrevista Fonte Humana","turma":"G","data":"11/06/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"DPF","codigo":"M1.1","descricao":"Simulação de Atividades de Sobreaviso","turma":"B","data":"11/06/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"EPF","codigo":"M3.1","descricao":"Entrevista Fonte Humana","turma":"H","data":"12/06/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M3.1","descricao":"Entrevista Fonte Humana","turma":"I","data":"12/06/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"DPF","codigo":"M3.1","descricao":"Entrevista Fonte Humana","turma":"A","data":"12/06/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"DPF","codigo":"M3.1","descricao":"Entrevista Fonte Humana","turma":"B","data":"12/06/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"DPF","codigo":"M3.1","descricao":"Entrevista Fonte Humana","turma":"C","data":"13/06/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"DPF","codigo":"M3.1","descricao":"Entrevista Fonte Humana","turma":"D","data":"13/06/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M3.2","descricao":"Planejamento de Vigilância","turma":"A","data":"15/06/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M3.2","descricao":"Planejamento de Vigilância","turma":"B","data":"15/06/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M3.2","descricao":"Planejamento de Vigilância","turma":"C","data":"15/06/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M3.2","descricao":"Planejamento de Vigilância","turma":"D","data":"15/06/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M2.2","descricao":"Exerc. Simulado Vigilância e Prisão - Crimes Eleitorais","turma":"A","data":"15/06/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"EPF","codigo":"M2.2","descricao":"Exerc. Simulado Vigilância e Prisão - Crimes Eleitorais","turma":"B","data":"15/06/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M3.2","descricao":"Planejamento de Vigilância","turma":"E","data":"16/06/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M3.2","descricao":"Planejamento de Vigilância","turma":"F","data":"16/06/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M3.2","descricao":"Planejamento de Vigilância","turma":"G","data":"16/06/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M3.2","descricao":"Planejamento de Vigilância","turma":"H","data":"16/06/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M2.2","descricao":"Exerc. Simulado Vigilância e Prisão - Crimes Eleitorais","turma":"D","data":"16/06/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"EPF","codigo":"M2.2","descricao":"Exerc. Simulado Vigilância e Prisão - Crimes Eleitorais","turma":"C","data":"16/06/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"DPF","codigo":"M1.1","descricao":"Simulação de Atividades de Sobreaviso","turma":"E","data":"16/06/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"EPF","codigo":"M3.2","descricao":"Planejamento de Vigilância","turma":"I","data":"17/06/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"DPF","codigo":"M3.2","descricao":"Planejamento de Vigilância","turma":"A","data":"17/06/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"DPF","codigo":"M3.2","descricao":"Planejamento de Vigilância","turma":"B","data":"17/06/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"DPF","codigo":"M3.2","descricao":"Planejamento de Vigilância","turma":"C","data":"17/06/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M2.2","descricao":"Exerc. Simulado Vigilância e Prisão - Crimes Eleitorais","turma":"F","data":"17/06/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"EPF","codigo":"M2.2","descricao":"Exerc. Simulado Vigilância e Prisão - Crimes Eleitorais","turma":"E","data":"17/06/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"DPF","codigo":"M1.1","descricao":"Simulação de Atividades de Sobreaviso","turma":"D","data":"17/06/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"DPF","codigo":"M3.1","descricao":"Exercício Simulação – Entrevista Fonte Humana","turma":"E","data":"18/06/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"DPF","codigo":"M3.2","descricao":"Planejamento de Vigilância","turma":"D","data":"18/06/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"DPF","codigo":"M3.2","descricao":"Planejamento de Vigilância","turma":"E","data":"18/06/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M2.2","descricao":"Exerc. Simulado Vigilância e Prisão - Crimes Eleitorais","turma":"H","data":"18/06/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"EPF","codigo":"M2.2","descricao":"Exerc. Simulado Vigilância e Prisão - Crimes Eleitorais","turma":"G","data":"18/06/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M1.1","descricao":"Simulação de Atividades de Sobreaviso","turma":"I","data":"18/06/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"EPF","codigo":"M2.2","descricao":"Exerc. Simulado Vigilância e Prisão - Crimes Eleitorais","turma":"I","data":"19/06/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"DPF","codigo":"M2.1","descricao":"Exercício simulado de vigilância e prisão em matéria de crimes eleitorais","turma":"A","data":"19/06/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"DPF","codigo":"M2.1","descricao":"Exercício simulado de vigilância e prisão em matéria de crimes eleitorais","turma":"B","data":"19/06/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"DPF","codigo":"M2.1","descricao":"Exercício simulado de vigilância e prisão em matéria de crimes eleitorais","turma":"C","data":"19/06/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"DPF","codigo":"M2.1","descricao":"Exercício simulado de vigilância e prisão em matéria de crimes eleitorais","turma":"D","data":"20/06/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"DPF","codigo":"M2.1","descricao":"Exercício simulado de vigilância e prisão em matéria de crimes eleitorais","turma":"E","data":"20/06/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M2.3","descricao":"Exerc. Simulado MBA - Crimes Previdenciários","turma":"C","data":"22/06/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"EPF","codigo":"M2.3","descricao":"Exerc. Simulado MBA - Crimes Previdenciários","turma":"D","data":"22/06/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M2.3","descricao":"Exerc. Simulado MBA - Crimes Previdenciários","turma":"E","data":"23/06/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M2.3","descricao":"Exerc. Simulado MBA - Crimes Previdenciários","turma":"F","data":"23/06/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"DPF","codigo":"M3.3","descricao":"Exerc. Simulado Vigilância no Aeroporto","turma":"A","data":"23/06/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"DPF","codigo":"M3.3","descricao":"(cont. Vigilância Aeroporto)","turma":"A","data":"23/06/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M1.1","descricao":"Simulação de Atividades de Sobreaviso","turma":"G","data":"23/06/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"PPF","codigo":"M1.1","descricao":"Sobreaviso 1","turma":"A","data":"24/06/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"PPF","codigo":"M1.1","descricao":"Sobreaviso 1","turma":"B","data":"24/06/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"DPF","codigo":"M3.3","descricao":"Exerc. Simulado Vigilância no Aeroporto","turma":"B","data":"24/06/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"DPF","codigo":"M3.3","descricao":"(cont. Vigilância Aeroporto)","turma":"B","data":"24/06/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"DPF","codigo":"M2.2","descricao":"Exerc. Simulado Apreensão de Valores - Crimes Eleitorais","turma":"A","data":"25/06/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"DPF","codigo":"M2.2","descricao":"Exerc. Simulado Apreensão de Valores - Crimes Eleitorais","turma":"B","data":"25/06/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"DPF","codigo":"M3.3","descricao":"Exerc. Simulado Vigilância no Aeroporto","turma":"C","data":"25/06/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"DPF","codigo":"M3.3","descricao":"(cont. Vigilância Aeroporto)","turma":"C","data":"25/06/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M1.1","descricao":"Simulação de Atividades de Sobreaviso","turma":"E","data":"25/06/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"DPF","codigo":"M2.2","descricao":"Exerc. Simulado Apreensão de Valores - Crimes Eleitorais","turma":"C","data":"26/06/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"DPF","codigo":"M2.2","descricao":"Exerc. Simulado Apreensão de Valores - Crimes Eleitorais","turma":"D","data":"26/06/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"DPF","codigo":"M2.2","descricao":"Exerc. Simulado Apreensão de Valores - Crimes Eleitorais","turma":"E","data":"26/06/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"EPF","codigo":"M2.3","descricao":"Exerc. Simulado MBA - Crimes Previdenciários","turma":"G","data":"26/06/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M1.1","descricao":"Simulação de Atividades de Sobreaviso","turma":"F","data":"26/06/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"EPF","codigo":"M1.1","descricao":"Simulação de Atividades de Sobreaviso","turma":"H","data":"28/06/2026","horaInicio":"13:50","horaFim":"17:30"},{"cargo":"DPF","codigo":"M2.3","descricao":"Exerc. Simulado MBA - Crimes Previdenciários","turma":"A","data":"29/06/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"DPF","codigo":"M2.3","descricao":"Exerc. Simulado MBA - Crimes Previdenciários","turma":"B","data":"29/06/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"DPF","codigo":"M2.3","descricao":"Exerc. Simulado MBA - Crimes Previdenciários","turma":"C","data":"29/06/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"DPF","codigo":"M2.3","descricao":"Exerc. Simulado MBA - Crimes Previdenciários","turma":"D","data":"29/06/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"DPF","codigo":"M2.3","descricao":"Exerc. Simulado MBA - Crimes Previdenciários","turma":"E","data":"30/06/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"PCF","codigo":"M1.1","descricao":"Sobreaviso 1","turma":"A","data":"30/06/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"DPF","codigo":"M3.3","descricao":"Exerc. Simulado Vigilância no Aeroporto","turma":"D","data":"30/06/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"DPF","codigo":"M3.3","descricao":"(cont. Vigilância Aeroporto)","turma":"D","data":"30/06/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"PCF","codigo":"M1.1","descricao":"Sobreaviso 1","turma":"B","data":"01/07/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"PCF","codigo":"M1.1","descricao":"Sobreaviso 1","turma":"C","data":"01/07/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M2.3","descricao":"Exerc. Simulado MBA - Crimes Previdenciários","turma":"H","data":"02/07/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M2.3","descricao":"Exerc. Simulado MBA - Crimes Previdenciários","turma":"I","data":"02/07/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"DPF","codigo":"M3.3","descricao":"Exerc. Simulado Vigilância no Aeroporto","turma":"E","data":"02/07/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"DPF","codigo":"M3.3","descricao":"(cont. Vigilância Aeroporto)","turma":"E","data":"02/07/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M2.3","descricao":"Exerc. Simulado MBA - Crimes Previdenciários","turma":"A","data":"03/07/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M2.3","descricao":"Exerc. Simulado MBA - Crimes Previdenciários","turma":"B","data":"03/07/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M3.3","descricao":"Exerc. Simulado Vigilância no Aeroporto","turma":"A","data":"04/07/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M3.3","descricao":"(cont. Vigilância Aeroporto)","turma":"A","data":"04/07/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M3.3","descricao":"Exerc. Simulado Vigilância no Aeroporto","turma":"B","data":"04/07/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"EPF","codigo":"M3.3","descricao":"(cont. Vigilância Aeroporto)","turma":"B","data":"04/07/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"DPF","codigo":"M2.4","descricao":"Exerc. Simulado MBA - Crimes Ambientais","turma":"A","data":"06/07/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"DPF","codigo":"M2.4","descricao":"(cont. Crimes Ambientais)","turma":"A","data":"06/07/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"DPF","codigo":"M2.4","descricao":"Exerc. Simulado MBA - Crimes Ambientais","turma":"B","data":"06/07/2026","horaInicio":"13:50","horaFim":"17:30"},{"cargo":"PCF","codigo":"M2.1","descricao":"Simulação de Atividades de Sobreaviso","turma":"A","data":"06/07/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"PPF","codigo":"M2.1","descricao":"Simulação de Atividades de Sobreaviso","turma":"A","data":"06/07/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"PCF","codigo":"M2.2","descricao":"Exerc. Simulado MBA - Crimes Ambientais","turma":"A","data":"07/07/2026","horaInicio":"08:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M3.3","descricao":"Exerc. Simulado Vigilância no Aeroporto","turma":"C","data":"07/07/2026","horaInicio":"13:50","horaFim":"17:30"},{"cargo":"PCF","codigo":"M2.2","descricao":"Exerc. Simulado MBA - Crimes Ambientais","turma":"B","data":"08/07/2026","horaInicio":"08:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M3.3","descricao":"Exerc. Simulado Vigilância no Aeroporto","turma":"D","data":"08/07/2026","horaInicio":"13:50","horaFim":"17:30"},{"cargo":"PCF","codigo":"M2.1","descricao":"Simulação de Atividades de Sobreaviso","turma":"B","data":"08/07/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"PPF","codigo":"M2.1","descricao":"Simulação de Atividades de Sobreaviso","turma":"B","data":"08/07/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"DPF","codigo":"M2.4","descricao":"Exerc. Simulado MBA - Crimes Ambientais","turma":"C","data":"09/07/2026","horaInicio":"08:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M3.3","descricao":"Exerc. Simulado Vigilância no Aeroporto","turma":"E","data":"09/07/2026","horaInicio":"13:50","horaFim":"17:30"},{"cargo":"DPF","codigo":"M2.4","descricao":"Exerc. Simulado MBA - Crimes Ambientais","turma":"D","data":"10/07/2026","horaInicio":"08:00","horaFim":"11:40"},{"cargo":"DPF","codigo":"M2.4","descricao":"Exerc. Simulado MBA - Crimes Ambientais","turma":"E","data":"10/07/2026","horaInicio":"13:50","horaFim":"17:30"},{"cargo":"PCF","codigo":"M2.1","descricao":"Simulação de Atividades de Sobreaviso","turma":"C","data":"10/07/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"EPF","codigo":"M3.3","descricao":"Exerc. Simulado Vigilância no Aeroporto","turma":"F","data":"11/07/2026","horaInicio":"08:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M3.3","descricao":"Exerc. Simulado Vigilância no Aeroporto","turma":"G","data":"11/07/2026","horaInicio":"13:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M3.3","descricao":"Exerc. Simulado Vigilância no Aeroporto","turma":"H","data":"12/07/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M3.3","descricao":"Exerc. Simulado Vigilância no Aeroporto","turma":"H","data":"12/07/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M3.3","descricao":"Exerc. Simulado Vigilância no Aeroporto","turma":"I","data":"12/07/2026","horaInicio":"13:50","horaFim":"17:30"},{"cargo":"PCF","codigo":"M2.2","descricao":"Exerc. Simulado MBA - Crimes Ambientais","turma":"C","data":"13/07/2026","horaInicio":"08:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M2.4","descricao":"Exerc. Simulado MBA - Crimes Ambientais","turma":"A","data":"13/07/2026","horaInicio":"13:50","horaFim":"17:30"},{"cargo":"DPF","codigo":"M3.4","descricao":"Formalização Resultados Vigilância","turma":"A","data":"13/07/2026","horaInicio":"19:00","horaFim":"20:40"},{"cargo":"DPF","codigo":"M3.4","descricao":"Formalização Resultados Vigilância","turma":"B","data":"13/07/2026","horaInicio":"19:00","horaFim":"20:40"},{"cargo":"PPF","codigo":"M2.2","descricao":"Exerc. Simulado MBA - Crimes Ambientais","turma":"A","data":"14/07/2026","horaInicio":"08:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M2.4","descricao":"Exerc. Simulado MBA - Crimes Ambientais","turma":"B","data":"14/07/2026","horaInicio":"13:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M1.2","descricao":"Simulação de Ocorrências de Sobreaviso","turma":"A","data":"14/07/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"PPF","codigo":"M2.2","descricao":"Exerc. Simulado MBA - Crimes Ambientais","turma":"B","data":"15/07/2026","horaInicio":"08:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M2.4","descricao":"Exerc. Simulado MBA - Crimes Ambientais","turma":"C","data":"15/07/2026","horaInicio":"13:50","horaFim":"17:30"},{"cargo":"DPF","codigo":"M3.4","descricao":"Formalização Resultados Vigilância","turma":"C","data":"15/07/2026","horaInicio":"19:00","horaFim":"20:40"},{"cargo":"DPF","codigo":"M3.4","descricao":"Formalização Resultados Vigilância","turma":"D","data":"15/07/2026","horaInicio":"19:00","horaFim":"20:40"},{"cargo":"EPF","codigo":"M2.4","descricao":"Exerc. Simulado MBA - Crimes Ambientais","turma":"D","data":"16/07/2026","horaInicio":"08:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M2.4","descricao":"Exerc. Simulado MBA - Crimes Ambientais","turma":"E","data":"16/07/2026","horaInicio":"13:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M1.2","descricao":"Simulação de Ocorrências de Sobreaviso","turma":"B","data":"16/07/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"EPF","codigo":"M2.4","descricao":"Exerc. Simulado MBA - Crimes Ambientais","turma":"F","data":"17/07/2026","horaInicio":"08:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M2.4","descricao":"Exerc. Simulado MBA - Crimes Ambientais","turma":"G","data":"17/07/2026","horaInicio":"13:50","horaFim":"17:30"},{"cargo":"DPF","codigo":"M3.4","descricao":"Formalização Resultados Vigilância","turma":"E","data":"17/07/2026","horaInicio":"19:00","horaFim":"20:40"},{"cargo":"EPF","codigo":"M2.4","descricao":"Exerc. Simulado MBA - Crimes Ambientais","turma":"H","data":"18/07/2026","horaInicio":"08:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M1.2","descricao":"Simulação de Ocorrências de Sobreaviso","turma":"C","data":"18/07/2026","horaInicio":"13:50","horaFim":"17:30"},{"cargo":"PCF","codigo":"M2.3","descricao":"Exercício Simulado - MBA - Abuso Sexual Infantil","turma":"A","data":"20/07/2026","horaInicio":"06:00","horaFim":"07:40"},{"cargo":"EPF","codigo":"M3.4","descricao":"Exercício de Análise de Dados (IPED)","turma":"A","data":"20/07/2026","horaInicio":"08:00","horaFim":"11:40"},{"cargo":"PCF","codigo":"M2.4","descricao":"Exercício Simulado - Laudo de Constatação","turma":"A","data":"20/07/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"PCF","codigo":"M2.5","descricao":"Exercício Simulado - Laudo de Constatação","turma":"A","data":"20/07/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M3.4","descricao":"Exercício de Análise de Dados (IPED)","turma":"B","data":"20/07/2026","horaInicio":"13:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M2.4","descricao":"Exerc. Simulado MBA - Crimes Ambientais","turma":"I","data":"20/07/2026","horaInicio":"13:50","horaFim":"17:30"},{"cargo":"DPF","codigo":"M1.2","descricao":"Simulação de Ocorrências de Sobreaviso","turma":"C","data":"20/07/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"PCF","codigo":"M2.3","descricao":"Exercício Simulado - MBA - Abuso Sexual Infantil","turma":"B","data":"21/07/2026","horaInicio":"06:00","horaFim":"07:40"},{"cargo":"EPF","codigo":"M3.4","descricao":"Exercício de Análise de Dados (IPED)","turma":"C","data":"21/07/2026","horaInicio":"08:00","horaFim":"11:40"},{"cargo":"PCF","codigo":"M2.4","descricao":"Exercício Simulado - Laudo de Constatação","turma":"B","data":"21/07/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"PCF","codigo":"M2.5","descricao":"Exercício Simulado - Laudo de Constatação","turma":"B","data":"21/07/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M3.4","descricao":"Exercício de Análise de Dados (IPED)","turma":"D","data":"21/07/2026","horaInicio":"13:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M2.5","descricao":"Deflagração - Abuso Sexual Infantojuvenil","turma":"A","data":"21/07/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"EPF","codigo":"M2.6","descricao":"Exerc. Simulado MBA - Abuso Sexual Infantojuvenil","turma":"A","data":"21/07/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M2.7","descricao":"Exerc. Simulado Formalização DCIBER","turma":"A","data":"21/07/2026","horaInicio":"19:00","horaFim":"20:40"},{"cargo":"PCF","codigo":"M2.3","descricao":"Exercício Simulado - MBA - Abuso Sexual Infantil","turma":"C","data":"22/07/2026","horaInicio":"06:00","horaFim":"07:40"},{"cargo":"EPF","codigo":"M3.4","descricao":"Exercício de Análise de Dados (IPED)","turma":"E","data":"22/07/2026","horaInicio":"08:00","horaFim":"11:40"},{"cargo":"PCF","codigo":"M2.4","descricao":"Exercício Simulado - Laudo de Constatação","turma":"C","data":"22/07/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"PCF","codigo":"M2.5","descricao":"Exercício Simulado - Laudo de Constatação","turma":"C","data":"22/07/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M3.4","descricao":"Exercício de Análise de Dados (IPED)","turma":"F","data":"22/07/2026","horaInicio":"13:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M2.5","descricao":"Deflagração - Abuso Sexual Infantojuvenil","turma":"B","data":"22/07/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"EPF","codigo":"M2.6","descricao":"Exerc. Simulado MBA - Abuso Sexual Infantojuvenil","turma":"B","data":"22/07/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M2.7","descricao":"Exerc. Simulado Formalização DCIBER","turma":"B","data":"22/07/2026","horaInicio":"19:00","horaFim":"20:40"},{"cargo":"PPF","codigo":"M2.3","descricao":"Exercício simulado - MBA Abuso Sexual Infantil","turma":"A","data":"23/07/2026","horaInicio":"06:00","horaFim":"07:40"},{"cargo":"EPF","codigo":"M3.4","descricao":"Exercício de Análise de Dados (IPED)","turma":"G","data":"23/07/2026","horaInicio":"08:00","horaFim":"11:40"},{"cargo":"PPF","codigo":"M2.4","descricao":"Exercício simulado - laudo de constatação","turma":"A","data":"23/07/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"PPF","codigo":"M2.5","descricao":"Exercício simulado - laudo de constatação","turma":"A","data":"23/07/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M3.4","descricao":"Exercício de Análise de Dados (IPED)","turma":"H","data":"23/07/2026","horaInicio":"13:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M2.5","descricao":"Deflagração - Abuso Sexual Infantojuvenil","turma":"C","data":"23/07/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"EPF","codigo":"M2.6","descricao":"Exerc. Simulado MBA - Abuso Sexual Infantojuvenil","turma":"C","data":"23/07/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M2.7","descricao":"Exerc. Simulado Formalização DCIBER","turma":"C","data":"23/07/2026","horaInicio":"19:00","horaFim":"20:40"},{"cargo":"PPF","codigo":"M2.3","descricao":"Exercício simulado - MBA Abuso Sexual Infantil","turma":"B","data":"24/07/2026","horaInicio":"06:00","horaFim":"07:40"},{"cargo":"EPF","codigo":"M3.4","descricao":"Exercício de Análise de Dados (IPED)","turma":"I","data":"24/07/2026","horaInicio":"08:00","horaFim":"11:40"},{"cargo":"PPF","codigo":"M2.4","descricao":"Exercício simulado - laudo de constatação","turma":"B","data":"24/07/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"PPF","codigo":"M2.5","descricao":"Exercício simulado - laudo de constatação","turma":"B","data":"24/07/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M2.5","descricao":"Deflagração - Abuso Sexual Infantojuvenil","turma":"D","data":"24/07/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"EPF","codigo":"M2.6","descricao":"Exerc. Simulado MBA - Abuso Sexual Infantojuvenil","turma":"D","data":"24/07/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M2.7","descricao":"Exerc. Simulado Formalização DCIBER","turma":"D","data":"24/07/2026","horaInicio":"19:00","horaFim":"20:40"},{"cargo":"DPF","codigo":"M1.2","descricao":"Simulação de Ocorrências de Sobreaviso","turma":"D","data":"25/07/2026","horaInicio":"13:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M2.5","descricao":"Deflagração - Abuso Sexual Infantojuvenil","turma":"E","data":"27/07/2026","horaInicio":"06:00","horaFim":"07:40"},{"cargo":"EPF","codigo":"M2.6","descricao":"Exerc. Simulado MBA - Abuso Sexual Infantojuvenil","turma":"E","data":"27/07/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"DPF","codigo":"M2.5","descricao":"Exerc. Simulado Representação - Abuso Sexual Infantojuvenil","turma":"A","data":"27/07/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M2.7","descricao":"Exerc. Simulado Formalização DCIBER","turma":"E","data":"27/07/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"DPF","codigo":"M3.5","descricao":"Exerc. Representação por Medidas Cautelares","turma":"A","data":"27/07/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"DPF","codigo":"M3.6","descricao":"Exerc. Representação Medidas Cautelares de Investigação","turma":"A","data":"27/07/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M1.2","descricao":"Simulação de Ocorrências de Sobreaviso","turma":"D","data":"27/07/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"EPF","codigo":"M2.5","descricao":"Deflagração - Abuso Sexual Infantojuvenil","turma":"F","data":"28/07/2026","horaInicio":"06:00","horaFim":"07:40"},{"cargo":"EPF","codigo":"M2.6","descricao":"Exerc. Simulado MBA - Abuso Sexual Infantojuvenil","turma":"F","data":"28/07/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"DPF","codigo":"M2.5","descricao":"Exerc. Simulado Representação - Abuso Sexual Infantojuvenil","turma":"B","data":"28/07/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M2.7","descricao":"Exerc. Simulado Formalização DCIBER","turma":"F","data":"28/07/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"DPF","codigo":"M3.5","descricao":"Exerc. Representação por Medidas Cautelares","turma":"B","data":"28/07/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"DPF","codigo":"M3.6","descricao":"Exerc. Representação Medidas Cautelares de Investigação","turma":"B","data":"28/07/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M2.5","descricao":"Deflagração - Abuso Sexual Infantojuvenil","turma":"G","data":"29/07/2026","horaInicio":"06:00","horaFim":"07:40"},{"cargo":"EPF","codigo":"M2.6","descricao":"Exerc. Simulado MBA - Abuso Sexual Infantojuvenil","turma":"G","data":"29/07/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"DPF","codigo":"M2.5","descricao":"Exerc. Simulado Representação - Abuso Sexual Infantojuvenil","turma":"C","data":"29/07/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M2.7","descricao":"Exerc. Simulado Formalização DCIBER","turma":"G","data":"29/07/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"DPF","codigo":"M3.5","descricao":"Exerc. Representação por Medidas Cautelares","turma":"C","data":"29/07/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"DPF","codigo":"M3.6","descricao":"Exerc. Representação Medidas Cautelares de Investigação","turma":"C","data":"29/07/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M1.2","descricao":"Simulação de Ocorrências de Sobreaviso","turma":"E","data":"29/07/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"EPF","codigo":"M2.5","descricao":"Deflagração - Abuso Sexual Infantojuvenil","turma":"H","data":"30/07/2026","horaInicio":"06:00","horaFim":"07:40"},{"cargo":"EPF","codigo":"M2.6","descricao":"Exerc. Simulado MBA - Abuso Sexual Infantojuvenil","turma":"H","data":"30/07/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"DPF","codigo":"M2.5","descricao":"Exerc. Simulado Representação - Abuso Sexual Infantojuvenil","turma":"D","data":"30/07/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M2.7","descricao":"Exerc. Simulado Formalização DCIBER","turma":"H","data":"30/07/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"DPF","codigo":"M3.5","descricao":"Exerc. Representação por Medidas Cautelares","turma":"D","data":"30/07/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"DPF","codigo":"M3.6","descricao":"Exerc. Representação Medidas Cautelares de Investigação","turma":"D","data":"30/07/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M2.5","descricao":"Deflagração - Abuso Sexual Infantojuvenil","turma":"I","data":"31/07/2026","horaInicio":"06:00","horaFim":"07:40"},{"cargo":"EPF","codigo":"M2.6","descricao":"Exerc. Simulado MBA - Abuso Sexual Infantojuvenil","turma":"I","data":"31/07/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"DPF","codigo":"M2.5","descricao":"Exerc. Simulado Representação - Abuso Sexual Infantojuvenil","turma":"E","data":"31/07/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M2.7","descricao":"Exerc. Simulado Formalização DCIBER","turma":"I","data":"31/07/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"DPF","codigo":"M3.5","descricao":"Exerc. Representação por Medidas Cautelares","turma":"E","data":"31/07/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"DPF","codigo":"M3.6","descricao":"Exerc. Representação Medidas Cautelares de Investigação","turma":"E","data":"31/07/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M1.2","descricao":"Simulação de Ocorrências de Sobreaviso","turma":"F","data":"31/07/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"EPF","codigo":"M3.5","descricao":"Exerc. Formalização de Medidas Cautelares","turma":"A","data":"03/08/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M3.5","descricao":"Exerc. Formalização de Medidas Cautelares","turma":"B","data":"03/08/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"DPF","codigo":"M2.6","descricao":"Exerc. MBA - Abuso Sexual Infantojuvenil","turma":"A","data":"03/08/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"DPF","codigo":"M2.7","descricao":"Exerc. Simulado Formalização DCIBER","turma":"A","data":"03/08/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"DPF","codigo":"M1.2","descricao":"Simulação de Ocorrências de Sobreaviso","turma":"E","data":"03/08/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"EPF","codigo":"M3.5","descricao":"Exerc. Formalização de Medidas Cautelares","turma":"C","data":"04/08/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M3.5","descricao":"Exerc. Formalização de Medidas Cautelares","turma":"D","data":"04/08/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"DPF","codigo":"M2.6","descricao":"Exerc. MBA - Abuso Sexual Infantojuvenil","turma":"B","data":"04/08/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"DPF","codigo":"M2.7","descricao":"Exerc. Simulado Formalização DCIBER","turma":"B","data":"04/08/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M3.5","descricao":"Exerc. Formalização de Medidas Cautelares","turma":"E","data":"05/08/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M3.5","descricao":"Exerc. Formalização de Medidas Cautelares","turma":"F","data":"05/08/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"DPF","codigo":"M2.6","descricao":"Exerc. MBA - Abuso Sexual Infantojuvenil","turma":"C","data":"05/08/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"DPF","codigo":"M2.7","descricao":"Exerc. Simulado Formalização DCIBER","turma":"C","data":"05/08/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"DPF","codigo":"M1.2","descricao":"Simulação de Ocorrências de Sobreaviso","turma":"A","data":"05/08/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"EPF","codigo":"M3.5","descricao":"Exerc. Formalização de Medidas Cautelares","turma":"G","data":"06/08/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M3.5","descricao":"Exerc. Formalização de Medidas Cautelares","turma":"H","data":"06/08/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"DPF","codigo":"M2.6","descricao":"Exerc. MBA - Abuso Sexual Infantojuvenil","turma":"D","data":"06/08/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"DPF","codigo":"M2.7","descricao":"Exerc. Simulado Formalização DCIBER","turma":"D","data":"06/08/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M3.5","descricao":"Exerc. Formalização de Medidas Cautelares","turma":"I","data":"07/08/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"DPF","codigo":"M2.6","descricao":"Exerc. MBA - Abuso Sexual Infantojuvenil","turma":"E","data":"07/08/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"DPF","codigo":"M2.7","descricao":"Exerc. Simulado Formalização DCIBER","turma":"E","data":"07/08/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"DPF","codigo":"M1.2","descricao":"Simulação de Ocorrências de Sobreaviso","turma":"B","data":"07/08/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"EPF","codigo":"M3.6","descricao":"Exerc. Planejamento da Ação","turma":"A","data":"10/08/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M3.6","descricao":"Exerc. Planejamento da Ação","turma":"B","data":"10/08/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"DPF","codigo":"M3.7","descricao":"planejamento da ação com apresentação de um briefing","turma":"A","data":"10/08/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"DPF","codigo":"M3.7","descricao":"planejamento da ação com apresentação de um briefing","turma":"B","data":"10/08/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M1.2","descricao":"Simulação de Ocorrências de Sobreaviso","turma":"I","data":"10/08/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"EPF","codigo":"M3.6","descricao":"Exerc. Planejamento da Ação","turma":"C","data":"11/08/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M3.6","descricao":"Exerc. Planejamento da Ação","turma":"D","data":"11/08/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"DPF","codigo":"M3.7","descricao":"planejamento da ação com apresentação de um briefing","turma":"C","data":"11/08/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"DPF","codigo":"M3.7","descricao":"planejamento da ação com apresentação de um briefing","turma":"D","data":"11/08/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M3.6","descricao":"Exerc. Planejamento da Ação","turma":"E","data":"12/08/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M3.6","descricao":"Exerc. Planejamento da Ação","turma":"F","data":"12/08/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M3.7","descricao":"Exerc. Simulado de Deflagração","turma":"A","data":"12/08/2026","horaInicio":"13:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M1.2","descricao":"Simulação de Ocorrências de Sobreaviso","turma":"G","data":"12/08/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"EPF","codigo":"M3.6","descricao":"Exerc. Planejamento da Ação","turma":"G","data":"13/08/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M3.6","descricao":"Exerc. Planejamento da Ação","turma":"H","data":"13/08/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M3.7","descricao":"Exerc. Simulado de Deflagração","turma":"B","data":"13/08/2026","horaInicio":"13:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M3.6","descricao":"Exerc. Planejamento da Ação","turma":"I","data":"14/08/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"DPF","codigo":"M3.7","descricao":"planejamento da ação com apresentação de um briefing","turma":"E","data":"14/08/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M3.7","descricao":"Exerc. Simulado de Deflagração","turma":"C","data":"14/08/2026","horaInicio":"13:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M1.2","descricao":"Simulação de Ocorrências de Sobreaviso","turma":"H","data":"14/08/2026","horaInicio":"19:00","horaFim":"22:30"},{"cargo":"EPF","codigo":"M3.7","descricao":"Exerc. Simulado de Deflagração","turma":"D","data":"15/08/2026","horaInicio":"08:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M3.7","descricao":"Exerc. Simulado de Deflagração","turma":"E","data":"17/08/2026","horaInicio":"08:00","horaFim":"11:40"},{"cargo":"DPF","codigo":"M3.8","descricao":"desencadeamento da ação - deflagração","turma":"A","data":"17/08/2026","horaInicio":"13:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M3.8","descricao":"Exerc. Prático Destinação de Bens","turma":"A","data":"17/08/2026","horaInicio":"19:00","horaFim":"20:40"},{"cargo":"EPF","codigo":"M3.8","descricao":"Exerc. Prático Destinação de Bens","turma":"B","data":"17/08/2026","horaInicio":"19:00","horaFim":"20:40"},{"cargo":"EPF","codigo":"M3.8","descricao":"Exerc. Prático Destinação de Bens","turma":"C","data":"17/08/2026","horaInicio":"19:00","horaFim":"20:40"},{"cargo":"EPF","codigo":"M3.9","descricao":"Exerc. Simulado Audiência de Instrução e Julgamento","turma":"A","data":"17/08/2026","horaInicio":"20:50","horaFim":"22:30"},{"cargo":"EPF","codigo":"M3.9","descricao":"Exerc. Simulado Audiência de Instrução e Julgamento","turma":"B","data":"17/08/2026","horaInicio":"20:50","horaFim":"22:30"},{"cargo":"EPF","codigo":"M3.9","descricao":"Exerc. Simulado Audiência de Instrução e Julgamento","turma":"C","data":"17/08/2026","horaInicio":"20:50","horaFim":"22:30"},{"cargo":"EPF","codigo":"M3.7","descricao":"Exerc. Simulado de Deflagração","turma":"F","data":"18/08/2026","horaInicio":"08:00","horaFim":"11:40"},{"cargo":"DPF","codigo":"M3.8","descricao":"desencadeamento da ação - deflagração","turma":"B","data":"18/08/2026","horaInicio":"13:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M3.8","descricao":"Exerc. Prático Destinação de Bens","turma":"D","data":"18/08/2026","horaInicio":"19:00","horaFim":"20:40"},{"cargo":"EPF","codigo":"M3.8","descricao":"Exerc. Prático Destinação de Bens","turma":"E","data":"18/08/2026","horaInicio":"19:00","horaFim":"20:40"},{"cargo":"EPF","codigo":"M3.8","descricao":"Exerc. Prático Destinação de Bens","turma":"F","data":"18/08/2026","horaInicio":"19:00","horaFim":"20:40"},{"cargo":"EPF","codigo":"M3.9","descricao":"Exerc. Simulado Audiência de Instrução e Julgamento","turma":"D","data":"18/08/2026","horaInicio":"20:50","horaFim":"22:30"},{"cargo":"EPF","codigo":"M3.9","descricao":"Exerc. Simulado Audiência de Instrução e Julgamento","turma":"E","data":"18/08/2026","horaInicio":"20:50","horaFim":"22:30"},{"cargo":"EPF","codigo":"M3.9","descricao":"Exerc. Simulado Audiência de Instrução e Julgamento","turma":"F","data":"18/08/2026","horaInicio":"20:50","horaFim":"22:30"},{"cargo":"EPF","codigo":"M3.7","descricao":"Exerc. Simulado de Deflagração","turma":"G","data":"19/08/2026","horaInicio":"08:00","horaFim":"11:40"},{"cargo":"DPF","codigo":"M3.8","descricao":"desencadeamento da ação - deflagração","turma":"C","data":"19/08/2026","horaInicio":"13:50","horaFim":"17:30"},{"cargo":"DPF","codigo":"M3.9","descricao":"Exerc. Prático Conclusão - Relatório Policial Final","turma":"A","data":"19/08/2026","horaInicio":"19:00","horaFim":"20:40"},{"cargo":"DPF","codigo":"M3.9","descricao":"Exerc. Prático Conclusão - Relatório Policial Final","turma":"B","data":"19/08/2026","horaInicio":"19:00","horaFim":"20:40"},{"cargo":"EPF","codigo":"M3.8","descricao":"Exerc. Prático Destinação de Bens","turma":"G","data":"19/08/2026","horaInicio":"19:00","horaFim":"20:40"},{"cargo":"EPF","codigo":"M3.9","descricao":"Exerc. Simulado Audiência de Instrução e Julgamento","turma":"G","data":"19/08/2026","horaInicio":"20:50","horaFim":"22:30"},{"cargo":"EPF","codigo":"M3.7","descricao":"Exerc. Simulado de Deflagração","turma":"H","data":"20/08/2026","horaInicio":"08:00","horaFim":"11:40"},{"cargo":"DPF","codigo":"M3.8","descricao":"desencadeamento da ação - deflagração","turma":"D","data":"20/08/2026","horaInicio":"13:50","horaFim":"17:30"},{"cargo":"EPF","codigo":"M3.8","descricao":"Exerc. Prático Destinação de Bens","turma":"H","data":"20/08/2026","horaInicio":"19:00","horaFim":"20:40"},{"cargo":"DPF","codigo":"M3.10","descricao":"Exercício Simulado de Audiência de Instrução e Julgamento","turma":"A","data":"20/08/2026","horaInicio":"20:50","horaFim":"22:30"},{"cargo":"DPF","codigo":"M3.10","descricao":"Exercício Simulado de Audiência de Instrução e Julgamento","turma":"B","data":"20/08/2026","horaInicio":"20:50","horaFim":"22:30"},{"cargo":"EPF","codigo":"M3.9","descricao":"Exerc. Simulado Audiência de Instrução e Julgamento","turma":"H","data":"20/08/2026","horaInicio":"20:50","horaFim":"22:30"},{"cargo":"EPF","codigo":"M3.7","descricao":"Exerc. Simulado de Deflagração","turma":"I","data":"21/08/2026","horaInicio":"08:00","horaFim":"11:40"},{"cargo":"DPF","codigo":"M3.8","descricao":"desencadeamento da ação - deflagração","turma":"E","data":"21/08/2026","horaInicio":"13:50","horaFim":"17:30"},{"cargo":"DPF","codigo":"M3.9","descricao":"Exerc. Prático Conclusão - Relatório Policial Final","turma":"C","data":"21/08/2026","horaInicio":"19:00","horaFim":"20:40"},{"cargo":"DPF","codigo":"M3.9","descricao":"Exerc. Prático Conclusão - Relatório Policial Final","turma":"D","data":"21/08/2026","horaInicio":"19:00","horaFim":"20:40"},{"cargo":"DPF","codigo":"M3.9","descricao":"Exerc. Prático Conclusão - Relatório Policial Final","turma":"E","data":"21/08/2026","horaInicio":"19:00","horaFim":"20:40"},{"cargo":"DPF","codigo":"M3.10","descricao":"Exercício Simulado de Audiência de Instrução e Julgamento","turma":"C","data":"21/08/2026","horaInicio":"20:50","horaFim":"22:30"},{"cargo":"EPF","codigo":"M3.8","descricao":"Exerc. Prático Destinação de Bens","turma":"I","data":"21/08/2026","horaInicio":"20:50","horaFim":"22:30"},{"cargo":"EPF","codigo":"M3.9","descricao":"Exerc. Simulado Audiência de Instrução e Julgamento","turma":"I","data":"21/08/2026","horaInicio":"20:50","horaFim":"22:30"},{"cargo":"EPF","codigo":"M3.10","descricao":"Exerc. Revisão das Atividades","turma":"A","data":"24/08/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M3.10","descricao":"Exerc. Revisão das Atividades","turma":"B","data":"24/08/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M3.10","descricao":"Exerc. Revisão das Atividades","turma":"C","data":"24/08/2026","horaInicio":"08:00","horaFim":"09:40"},{"cargo":"EPF","codigo":"M3.10","descricao":"Exerc. Revisão das Atividades","turma":"D","data":"24/08/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M3.10","descricao":"Exerc. Revisão das Atividades","turma":"E","data":"24/08/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M3.10","descricao":"Exerc. Revisão das Atividades","turma":"F","data":"24/08/2026","horaInicio":"10:00","horaFim":"11:40"},{"cargo":"EPF","codigo":"M3.10","descricao":"Exerc. Revisão das Atividades","turma":"G","data":"24/08/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"EPF","codigo":"M3.10","descricao":"Exerc. Revisão das Atividades","turma":"H","data":"24/08/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"EPF","codigo":"M3.10","descricao":"Exerc. Revisão das Atividades","turma":"I","data":"24/08/2026","horaInicio":"13:50","horaFim":"15:30"},{"cargo":"DPF","codigo":"M3.11","descricao":"Exerc. Revisão das Atividades","turma":"A","data":"24/08/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"DPF","codigo":"M3.11","descricao":"Exerc. Revisão das Atividades","turma":"B","data":"24/08/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"DPF","codigo":"M3.11","descricao":"Exerc. Revisão das Atividades","turma":"C","data":"24/08/2026","horaInicio":"15:50","horaFim":"17:30"},{"cargo":"DPF","codigo":"M3.10","descricao":"Exercício Simulado de Audiência de Instrução e Julgamento","turma":"D","data":"24/08/2026","horaInicio":"19:00","horaFim":"20:40"},{"cargo":"DPF","codigo":"M3.10","descricao":"Exercício Simulado de Audiência de Instrução e Julgamento","turma":"E","data":"24/08/2026","horaInicio":"19:00","horaFim":"20:40"},{"cargo":"DPF","codigo":"M3.11","descricao":"Exerc. Revisão das Atividades","turma":"D","data":"24/08/2026","horaInicio":"20:50","horaFim":"22:30"},{"cargo":"DPF","codigo":"M3.11","descricao":"Exerc. Revisão das Atividades","turma":"E","data":"24/08/2026","horaInicio":"20:50","horaFim":"22:30"}];
+/* END_DADOS_AULAS */
+
+const DOW = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+const MESES_NOME = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function parseDateBR(str){
+  const [d,m,y] = str.split('/').map(Number);
+  return new Date(y, m-1, d);
+}
+function toISO(date){
+  return date.getFullYear() + '-' + String(date.getMonth()+1).padStart(2,'0') + '-' + String(date.getDate()).padStart(2,'0');
+}
+function todayAtMidnight(){
+  const t = new Date();
+  return new Date(t.getFullYear(), t.getMonth(), t.getDate());
+}
+
+function initDefaults(){
+  const hoje = todayAtMidnight();
+  const em30 = new Date(hoje); em30.setDate(em30.getDate()+30);
+  document.getElementById('f-inicio').value = toISO(hoje);
+  document.getElementById('f-inicio').min = toISO(hoje);
+  document.getElementById('f-fim').value = toISO(em30);
+  document.getElementById('f-fim').min = toISO(hoje);
+}
+
+function buscar(){
+  const hoje = todayAtMidnight();
+  let inicio = document.getElementById('f-inicio').value ? new Date(document.getElementById('f-inicio').value + 'T00:00:00') : hoje;
+  let fim = document.getElementById('f-fim').value ? new Date(document.getElementById('f-fim').value + 'T00:00:00') : hoje;
+  if(inicio < hoje) inicio = hoje;
+  const cargo = document.getElementById('f-cargo').value;
+
+  const linhas = DADOS_AULAS
+    .map(r => ({...r, _date: parseDateBR(r.data)}))
+    .filter(r => r._date >= inicio && r._date <= fim && r._date >= hoje)
+    .filter(r => cargo === 'all' || r.cargo === cargo);
+
+  renderResultados(linhas, inicio, fim);
+}
+
+let ultimoResultado = null;
+
+function renderResultados(linhas, inicio, fim){
+  const resultados = document.getElementById('resultados');
+  const vazio = document.getElementById('vazio');
+  if(linhas.length === 0){
+    resultados.style.display = 'none';
+    vazio.style.display = 'block';
+    ultimoResultado = null;
+    return;
+  }
+  vazio.style.display = 'none';
+  resultados.style.display = 'block';
+
+  document.getElementById('st-total').textContent = linhas.length;
+
+  const porDia = new Map();
+  linhas.forEach(r => {
+    const iso = toISO(r._date);
+    if(!porDia.has(iso)) porDia.set(iso, []);
+    porDia.get(iso).push(r);
+  });
+  document.getElementById('st-dias').textContent = porDia.size;
+
+  const grupos = new Map();
+  linhas.forEach(r => {
+    const key = r.cargo + '|' + r.codigo + '|' + r.descricao;
+    if(!grupos.has(key)) grupos.set(key, {cargo:r.cargo, codigo:r.codigo, descricao:r.descricao, turmas:new Set(), count:0});
+    const g = grupos.get(key);
+    g.turmas.add(r.turma);
+    g.count++;
+  });
+  document.getElementById('st-codigos').textContent = new Set(linhas.map(r=>r.cargo+'|'+r.codigo)).size;
+
+  renderTabelaResumo(grupos);
+  renderCalendario(porDia, inicio, fim);
+  renderTabelaDias(porDia);
+
+  ultimoResultado = {
+    grupos: [...grupos.values()].sort((a,b) => a.cargo.localeCompare(b.cargo) || a.codigo.localeCompare(b.codigo, undefined, {numeric:true})),
+    inicio, fim,
+    cargo: document.getElementById('f-cargo').value,
+    total: linhas.length,
+    dias: porDia.size
+  };
+}
+
+function fmtDataCurta(date){
+  return String(date.getDate()).padStart(2,'0') + '/' + String(date.getMonth()+1).padStart(2,'0') + '/' + date.getFullYear();
+}
+
+function montarResumoTexto(){
+  if(!ultimoResultado) return '';
+  const r = ultimoResultado;
+  const linhas = [
+    'Consulta Aulas — Grade APC CFP2/2026',
+    'Período: ' + fmtDataCurta(r.inicio) + ' a ' + fmtDataCurta(r.fim) + (r.cargo !== 'all' ? ' · Cargo: ' + r.cargo : ''),
+    '',
+    'Cargo\tCódigo\tDescrição\tTurmas\tQtd. sessões'
+  ];
+  r.grupos.forEach(g => {
+    linhas.push(g.cargo + '\t' + g.codigo + '\t' + g.descricao + '\t' + [...g.turmas].sort().join(',') + '\t' + g.count);
+  });
+  linhas.push('');
+  linhas.push('Total: ' + r.total + ' aulas em ' + r.dias + ' dias');
+  return linhas.join('\n');
+}
+
+function escapeHtml(str){
+  const div = document.createElement('div');
+  div.textContent = String(str);
+  return div.innerHTML;
+}
+
+const CARGO_HEX = {EPF:'#3a9475', DPF:'#5b8ec4', PPF:'#d4a843', PCF:'#c96b5a'};
+
+function montarResumoHTML(){
+  if(!ultimoResultado) return '';
+  const r = ultimoResultado;
+  const linhaHeader = ['Cargo','Código','Descrição','Turmas','Qtd. sessões']
+    .map(h => `<th style="text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:#898781;border-bottom:1.5px solid #e1e0d9;padding:7px 10px">${h}</th>`).join('');
+
+  const linhasCorpo = r.grupos.map(g => {
+    const cor = CARGO_HEX[g.cargo] || '#52514e';
+    return `<tr>
+      <td style="padding:7px 10px;border-bottom:1px solid #eeede8"><span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;color:#fff;background:${cor}">${escapeHtml(g.cargo)}</span></td>
+      <td style="padding:7px 10px;border-bottom:1px solid #eeede8;font-weight:700">${escapeHtml(g.codigo)}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #eeede8">${escapeHtml(g.descricao)}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #eeede8;color:#52514e;font-size:11px">${escapeHtml([...g.turmas].sort().join(', '))}</td>
+      <td style="padding:7px 10px;border-bottom:1px solid #eeede8;text-align:right;font-weight:700;color:#1c2b4a">${g.count}</td>
+    </tr>`;
+  }).join('');
+
+  return `<div style="font-family:'Source Sans 3',system-ui,-apple-system,sans-serif;color:#0b0b0b">
+    <div style="font-size:15px;font-weight:900;color:#1c2b4a;margin-bottom:3px">Consulta Aulas</div>
+    <div style="font-size:12px;color:#52514e;margin-bottom:12px">Período: ${escapeHtml(fmtDataCurta(r.inicio))} a ${escapeHtml(fmtDataCurta(r.fim))}${r.cargo !== 'all' ? ' · Cargo: ' + escapeHtml(r.cargo) : ''}</div>
+    <table style="border-collapse:collapse;font-size:12px;width:100%">
+      <thead><tr>${linhaHeader}</tr></thead>
+      <tbody>${linhasCorpo}</tbody>
+    </table>
+    <div style="margin-top:10px;font-size:11px;color:#52514e">Total: ${r.total} aulas em ${r.dias} dias</div>
+  </div>`;
+}
+
+async function copiarResumo(){
+  if(!ultimoResultado) return;
+  const texto = montarResumoTexto();
+  const btn = document.getElementById('btn-copiar');
+  const marcarSucesso = () => {
+    const original = btn.textContent;
+    btn.textContent = 'Copiado!';
+    btn.classList.add('copiado');
+    setTimeout(() => { btn.textContent = original; btn.classList.remove('copiado'); }, 1800);
+  };
+  try{
+    if(navigator.clipboard && window.ClipboardItem){
+      const html = montarResumoHTML();
+      const item = new ClipboardItem({
+        'text/html': new Blob([html], {type:'text/html'}),
+        'text/plain': new Blob([texto], {type:'text/plain'})
+      });
+      await navigator.clipboard.write([item]);
+    } else {
+      await navigator.clipboard.writeText(texto);
+    }
+    marcarSucesso();
+  }catch(err){
+    try{
+      await navigator.clipboard.writeText(texto);
+      marcarSucesso();
+    }catch(err2){
+      alert('Não foi possível copiar automaticamente. Selecione e copie o texto:\n\n' + texto);
+    }
+  }
+}
+
+async function compartilharResumo(){
+  if(!ultimoResultado) return;
+  const texto = montarResumoTexto();
+  if(navigator.share){
+    try{
+      await navigator.share({ title: 'Consulta Aulas', text: texto });
+    }catch(err){ /* usuário cancelou o compartilhamento — nada a fazer */ }
+  } else {
+    await copiarResumo();
+  }
+}
+
+function baixarCSV(){
+  if(!ultimoResultado) return;
+  const r = ultimoResultado;
+  const header = ['cargo','codigo','descricao','turmas','qtdSessoes'];
+  const rows = [header, ...r.grupos.map(g => [g.cargo, g.codigo, g.descricao, [...g.turmas].sort().join(','), g.count])];
+  const csv = rows.map(row => row.map(v => '"' + String(v).replace(/"/g,'""') + '"').join(';')).join('\r\n');
+  const blob = new Blob(['﻿' + csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'disponibilidade_professor_' + toISO(r.inicio) + '_a_' + toISO(r.fim) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function baixarPDF(){
+  if(!ultimoResultado) return;
+  if(typeof window.jspdf === 'undefined'){ alert('Biblioteca de PDF não carregada. Verifique sua conexão.'); return; }
+  const r = ultimoResultado;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.setTextColor(28, 43, 74);
+  doc.text('Consulta Aulas', 40, 44);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  doc.setTextColor(80, 80, 80);
+  const periodoTxt = 'Período: ' + fmtDataCurta(r.inicio) + ' a ' + fmtDataCurta(r.fim) + (r.cargo !== 'all' ? '   ·   Cargo: ' + r.cargo : '');
+  doc.text(periodoTxt, 40, 62);
+  doc.text('Total: ' + r.total + ' aulas em ' + r.dias + ' dias', 40, 76);
+
+  doc.autoTable({
+    startY: 92,
+    head: [['Cargo', 'Código', 'Descrição', 'Turmas', 'Qtd.']],
+    body: r.grupos.map(g => [g.cargo, g.codigo, g.descricao, [...g.turmas].sort().join(', '), String(g.count)]),
+    styles: { font: 'helvetica', fontSize: 9, cellPadding: 5 },
+    headStyles: { fillColor: [28, 43, 74], textColor: 255, fontStyle: 'bold' },
+    columnStyles: { 4: { halign: 'right' } },
+    margin: { left: 40, right: 40 }
+  });
+
+  doc.save('consulta_aulas_' + toISO(r.inicio) + '_a_' + toISO(r.fim) + '.pdf');
+}
+
+function renderTabelaResumo(grupos){
+  const tbody = document.getElementById('tbl-resumo');
+  tbody.innerHTML = '';
+  const ordenado = [...grupos.values()].sort((a,b) =>
+    a.cargo.localeCompare(b.cargo) ||
+    a.codigo.localeCompare(b.codigo, undefined, {numeric:true}));
+
+  ordenado.forEach(g => {
+    const tr = document.createElement('tr');
+
+    const tdCargo = document.createElement('td');
+    const bdg = document.createElement('span');
+    bdg.className = 'bdg ' + g.cargo.toLowerCase();
+    bdg.textContent = g.cargo;
+    tdCargo.appendChild(bdg);
+
+    const tdCod = document.createElement('td');
+    tdCod.textContent = g.codigo;
+    tdCod.style.fontWeight = '700';
+
+    const tdDesc = document.createElement('td');
+    tdDesc.textContent = g.descricao;
+
+    const tdTurmas = document.createElement('td');
+    tdTurmas.textContent = [...g.turmas].sort().join(', ');
+    tdTurmas.style.color = 'var(--text-secondary)';
+    tdTurmas.style.fontSize = '11px';
+
+    const tdCount = document.createElement('td');
+    tdCount.className = 'num';
+    tdCount.textContent = g.count;
+
+    tr.append(tdCargo, tdCod, tdDesc, tdTurmas, tdCount);
+    tbody.appendChild(tr);
+  });
+}
+
+function bucketClass(count, max){
+  if(count <= 0) return '';
+  const ratio = count / max;
+  if(max <= 1 || count === 1) return 'b1';
+  if(ratio <= 0.34) return 'b2';
+  if(ratio <= 0.67) return 'b3';
+  return 'b4';
+}
+
+function renderCalendario(porDia, inicio, fim){
+  const container = document.getElementById('months-container');
+  container.innerHTML = '';
+
+  const maxCount = Math.max(1, ...[...porDia.values()].map(l => l.length));
+
+  const cursor = new Date(inicio.getFullYear(), inicio.getMonth(), 1);
+  const fimMonth = new Date(fim.getFullYear(), fim.getMonth(), 1);
+
+  while(cursor <= fimMonth){
+    const y = cursor.getFullYear(), m = cursor.getMonth();
+    const monthBlock = document.createElement('div');
+    monthBlock.className = 'month-block';
+
+    const title = document.createElement('div');
+    title.className = 'month-title';
+    title.textContent = MESES_NOME[m] + ' ' + y;
+    monthBlock.appendChild(title);
+
+    const grid = document.createElement('div');
+    grid.className = 'month-grid';
+    DOW.forEach(d => {
+      const dow = document.createElement('div');
+      dow.className = 'dow';
+      dow.textContent = d;
+      grid.appendChild(dow);
+    });
+
+    const firstDay = new Date(y, m, 1);
+    const daysInMonth = new Date(y, m+1, 0).getDate();
+    const leadBlanks = firstDay.getDay();
+
+    for(let i=0;i<leadBlanks;i++){
+      const blank = document.createElement('div');
+      blank.className = 'day-cell empty';
+      grid.appendChild(blank);
+    }
+
+    for(let d=1; d<=daysInMonth; d++){
+      const date = new Date(y, m, d);
+      const iso = toISO(date);
+      const cell = document.createElement('div');
+      cell.textContent = d;
+
+      const inRange = date >= inicio && date <= fim;
+      const sessions = porDia.get(iso) || [];
+
+      if(!inRange){
+        cell.className = 'day-cell out-range';
+      } else if(sessions.length > 0){
+        cell.className = 'day-cell has-data ' + bucketClass(sessions.length, maxCount);
+        cell.tabIndex = 0;
+        cell.addEventListener('pointerenter', e => showTooltip(e, date, sessions));
+        cell.addEventListener('pointermove', e => positionTooltip(e));
+        cell.addEventListener('pointerleave', hideTooltip);
+        cell.addEventListener('focus', e => showTooltip(e, date, sessions));
+        cell.addEventListener('blur', hideTooltip);
+      } else {
+        cell.className = 'day-cell';
+      }
+      grid.appendChild(cell);
+    }
+
+    monthBlock.appendChild(grid);
+    container.appendChild(monthBlock);
+    cursor.setMonth(cursor.getMonth()+1);
+  }
+}
+
+function renderTabelaDias(porDia){
+  const tbody = document.getElementById('tbl-dias');
+  tbody.innerHTML = '';
+  const dias = [...porDia.keys()].sort();
+  dias.forEach(iso => {
+    const sessions = porDia.get(iso);
+    const [y,m,d] = iso.split('-').map(Number);
+    const date = new Date(y, m-1, d);
+    const tr = document.createElement('tr');
+
+    const tdData = document.createElement('td');
+    tdData.textContent = String(d).padStart(2,'0') + '/' + String(m).padStart(2,'0') + '/' + y;
+
+    const tdDow = document.createElement('td');
+    tdDow.textContent = DOW[date.getDay()];
+    tdDow.style.color = 'var(--text-secondary)';
+
+    const tdCount = document.createElement('td');
+    tdCount.className = 'num';
+    tdCount.textContent = sessions.length;
+
+    tr.append(tdData, tdDow, tdCount);
+    tbody.appendChild(tr);
+  });
+}
+
+function showTooltip(e, date, sessions){
+  const tip = document.getElementById('tooltip');
+  tip.innerHTML = '';
+  const dateEl = document.createElement('div');
+  dateEl.className = 'tooltip-date';
+  dateEl.textContent = String(date.getDate()).padStart(2,'0') + '/' + String(date.getMonth()+1).padStart(2,'0') + '/' + date.getFullYear() + ' · ' + DOW[date.getDay()];
+  tip.appendChild(dateEl);
+
+  sessions.forEach(s => {
+    const row = document.createElement('div');
+    row.className = 'tooltip-row';
+    const cod = document.createElement('span');
+    cod.className = 'tooltip-cod';
+    cod.textContent = s.cargo + '-' + s.turma + ' · ' + s.codigo + ' ';
+    const desc = document.createElement('span');
+    desc.textContent = s.descricao + ' (' + s.horaInicio + '–' + s.horaFim + ')';
+    row.append(cod, desc);
+    tip.appendChild(row);
+  });
+
+  tip.classList.add('show');
+  positionTooltip(e);
+}
+function positionTooltip(e){
+  const tip = document.getElementById('tooltip');
+  const x = e.clientX, y = e.clientY;
+  const offset = 14;
+  let left = x + offset, top = y + offset;
+  if(left + 300 > window.innerWidth) left = x - 300 - offset;
+  if(top + 150 > window.innerHeight) top = y - 150 - offset;
+  tip.style.left = left + 'px';
+  tip.style.top = top + 'px';
+}
+function hideTooltip(){
+  document.getElementById('tooltip').classList.remove('show');
+}
+
+document.getElementById('btn-view-cal').onclick = () => {
+  document.getElementById('months-container').style.display = 'flex';
+  document.getElementById('tabela-dias-container').style.display = 'none';
+  document.getElementById('btn-view-cal').classList.add('active');
+  document.getElementById('btn-view-tbl').classList.remove('active');
+};
+document.getElementById('btn-view-tbl').onclick = () => {
+  document.getElementById('months-container').style.display = 'none';
+  document.getElementById('tabela-dias-container').style.display = 'block';
+  document.getElementById('btn-view-tbl').classList.add('active');
+  document.getElementById('btn-view-cal').classList.remove('active');
+};
+
+document.getElementById('btn-buscar').onclick = buscar;
+document.getElementById('btn-copiar').onclick = copiarResumo;
+document.getElementById('btn-compartilhar').onclick = compartilharResumo;
+document.getElementById('btn-baixar').onclick = baixarCSV;
+document.getElementById('btn-baixar-pdf').onclick = baixarPDF;
+document.getElementById('f-inicio').addEventListener('change', () => {
+  const ini = document.getElementById('f-inicio').value;
+  if(ini) document.getElementById('f-fim').min = ini;
+});
+
+initDefaults();
+buscar();
+</script>
+</body>
+</html>

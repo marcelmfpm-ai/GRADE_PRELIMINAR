@@ -8,10 +8,14 @@ A single-file HTML dashboard (`index.html`, ~7000 lines, ~680KB) tracking the cl
 
 There is no `package.json`, no test suite, and no linter. `generate-csv.js` is a standalone Node script (needs `npm install jsdom` — not vendored, no lockfile).
 
+`disponibilidade-professor.html` is a second, independent standalone page (own `<style>`/`<script>`, no shared code with `index.html`) that lets a scheduler pick a professor's availability window (start/end date + cargo) and see which classes fall in it: a summary table (cargo/código/descrição/turmas/count) and a month-by-month calendar heatmap. It only ever shows dates from today forward. Its data is a `const DADOS_AULAS = [...]` array baked directly into the file between `/* BEGIN_DADOS_AULAS */` / `/* END_DADOS_AULAS */` markers — regenerated from `index.html`'s live calendar by `generate-professor-data.py` (Python + BeautifulSoup, not Node — see below). It was deliberately kept data-embedded (not `fetch('calendario.csv')`) so it keeps working when opened directly via `file://`, matching `index.html`'s own no-build, no-fetch convention.
+
 ## Commands
 
 - **View the app**: `open index.html` (macOS) — just opens it in the default browser.
+- **View the professor-availability tool**: `open disponibilidade-professor.html`.
 - **Regenerate `calendario.csv` locally**: `npm install jsdom && node generate-csv.js` (run from repo root). Requires Node; nothing else in this repo does.
+- **Regenerate `disponibilidade-professor.html`'s embedded data**: `python3 generate-professor-data.py` (needs `beautifulsoup4`: `pip install beautifulsoup4`). Run this after any edit to `index.html`'s calendar cards — it only rewrites the `DADOS_AULAS` block between the markers, so hand-edits to the rest of the file survive. Node isn't available in every environment this repo is worked in; this script is the reason a Python path exists in parallel to the Node one used for `calendario.csv`.
 - No build, lint, or test commands exist.
 
 ### CI
