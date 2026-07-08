@@ -19,6 +19,7 @@
 body{font-family:'Source Sans 3','Source Sans Pro',system-ui,-apple-system,sans-serif;background:var(--page);color:var(--text-primary);font-size:13px;line-height:1.5}
 .header{background:var(--navy);color:#fff;padding:20px 24px}
 .header-title{font-size:22px;font-weight:900;letter-spacing:.3px}
+.header-course{font-size:13px;font-weight:700;color:rgba(255,255,255,.9);margin-top:4px;letter-spacing:.2px}
 .header-sub{font-size:12px;color:rgba(255,255,255,.75);margin-top:4px}
 .main{max-width:980px;margin:0 auto;padding:20px 20px 48px}
 
@@ -54,19 +55,20 @@ tr:hover td{background:var(--page)}
 .legenda-seq{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--text-muted)}
 .legenda-seq .sw{width:13px;height:13px;border-radius:3px;display:inline-block;border:1px solid var(--border)}
 
-.months-wrap{display:flex;flex-direction:column;gap:22px}
-.month-block{}
-.month-title{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px}
-.month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
-.dow{font-size:9px;font-weight:700;color:var(--text-muted);text-align:center;padding-bottom:4px;text-transform:uppercase}
-.day-cell{position:relative;aspect-ratio:1/1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--text-primary);cursor:default;border:1px solid var(--border)}
-.day-cell.empty{visibility:hidden}
-.day-cell.out-range{color:var(--text-muted);opacity:.35;border-style:dashed}
-.day-cell.has-data{cursor:pointer;border-color:transparent}
-.day-cell.b1{background:color-mix(in srgb, var(--seq) 22%, var(--surface-1))}
-.day-cell.b2{background:color-mix(in srgb, var(--seq) 48%, var(--surface-1))}
-.day-cell.b3{background:color-mix(in srgb, var(--seq) 75%, var(--surface-1))}
-.day-cell.b4{background:var(--seq);color:#fff}
+.tl-scroll{overflow-x:auto;overflow-y:hidden;padding-bottom:4px}
+.tl-canvas{position:relative;height:216px}
+.tl-weekend{position:absolute;top:18px;bottom:38px;background:var(--page)}
+.tl-divider{position:absolute;top:18px;bottom:38px;width:1px;background:var(--gridline)}
+.tl-month-label{position:absolute;top:0;font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+.tl-baseline{position:absolute;left:0;right:0;bottom:38px;height:1px;background:var(--baseline)}
+.tl-bar-seg{position:absolute;cursor:default}
+.tl-bar-seg.has-data{cursor:pointer}
+.tl-bar-seg.empty{background:var(--gridline)}
+.tl-bar-seg.epf{background:var(--epf)}
+.tl-bar-seg.dpf{background:var(--dpf)}
+.tl-bar-seg.pcf{background:var(--pcf)}
+.tl-bar-seg.ppf{background:var(--ppf)}
+.tl-day-label{position:absolute;bottom:20px;font-size:9px;font-weight:600;color:var(--text-muted);text-align:center}
 
 .tooltip{position:fixed;z-index:200;background:var(--navy);color:#fff;border-radius:8px;padding:10px 12px;font-size:11px;line-height:1.5;max-width:280px;box-shadow:0 8px 24px rgba(0,0,0,.3);pointer-events:none;opacity:0;transition:opacity .1s}
 .tooltip.show{opacity:1}
@@ -74,6 +76,7 @@ tr:hover td{background:var(--page)}
 .tooltip-row{padding:3px 0;border-top:1px solid rgba(255,255,255,.15)}
 .tooltip-row:first-of-type{border-top:none}
 .tooltip-cod{font-weight:700}
+.tooltip-dot{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:5px}
 
 .empty-state{text-align:center;padding:30px;color:var(--text-muted);font-size:12px}
 .actions-bar{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-top:4px}
@@ -82,6 +85,10 @@ tr:hover td{background:var(--page)}
 .action-btn-primary{background:var(--navy);color:#fff}
 .action-btn-primary:hover{opacity:.9;background:var(--navy)}
 .action-btn.copiado{background:#2e7560;border-color:#2e7560;color:#fff}
+.action-btn.epf{border-color:var(--epf);background:var(--epf);color:#fff}
+.action-btn.epf:hover{opacity:.9;background:var(--epf)}
+.action-btn.dpf{border-color:var(--dpf);background:var(--dpf);color:#fff}
+.action-btn.dpf:hover{opacity:.9;background:var(--dpf)}
 
 .footer{text-align:center;padding:16px;font-size:10px;color:var(--text-muted)}
 </style>
@@ -90,13 +97,20 @@ tr:hover td{background:var(--page)}
 
 <div class="header">
   <div class="header-title">Consulta Aulas</div>
-  <div class="header-sub">Consulta de aulas por período — Grade APC CFP2/2026</div>
+  <div class="header-course">APC - Atividade Policial em Campo</div>
+  <div class="header-sub">(Obs: após o professor lançar o período da sua missão, excluindo o deslocamento, serão apresentadas as aulas que ocorrerão no referido período)</div>
 </div>
 
 <div class="main">
 
   <div class="card">
-    <div class="card-titulo">Período de disponibilidade</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:12px">
+      <div class="card-titulo" style="margin-bottom:0">Período de disponibilidade</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button type="button" class="action-btn epf" id="btn-plano-epf">Plano Disciplina EPF</button>
+        <button type="button" class="action-btn dpf" id="btn-plano-dpf">Plano Disciplina DPF</button>
+      </div>
+    </div>
     <div class="filtros">
       <div class="filtro-campo">
         <label for="f-inicio">Data início</label>
@@ -132,7 +146,7 @@ tr:hover td{background:var(--page)}
       <div class="card-titulo">Códigos e descrições das aulas no período</div>
       <div class="tbl-wrap" style="overflow-x:auto">
         <table>
-          <thead><tr><th>Cargo</th><th>Código</th><th>Descrição</th><th>Turmas</th><th style="text-align:right">Qtd. sessões</th></tr></thead>
+          <thead><tr><th>Cargo</th><th>Código</th><th>Descrição</th><th>Ponto Focal</th><th>Turmas</th><th style="text-align:right">Qtd. sessões</th></tr></thead>
           <tbody id="tbl-resumo"></tbody>
         </table>
       </div>
@@ -143,12 +157,10 @@ tr:hover td{background:var(--page)}
         <div class="card-titulo" style="margin-bottom:0">Calendário do período</div>
         <div style="display:flex;align-items:center;gap:14px">
           <div class="legenda-seq">
-            <span>Menos</span>
-            <span class="sw" style="background:color-mix(in srgb, var(--seq) 22%, var(--surface-1))"></span>
-            <span class="sw" style="background:color-mix(in srgb, var(--seq) 48%, var(--surface-1))"></span>
-            <span class="sw" style="background:color-mix(in srgb, var(--seq) 75%, var(--surface-1))"></span>
-            <span class="sw" style="background:var(--seq)"></span>
-            <span>Mais aulas</span>
+            <span class="sw" style="background:var(--epf)"></span><span>Escrivão</span>
+            <span class="sw" style="background:var(--dpf)"></span><span>Delegado</span>
+            <span class="sw" style="background:var(--pcf)"></span><span>Perito</span>
+            <span class="sw" style="background:var(--ppf)"></span><span>Papiloscopista</span>
           </div>
           <div class="view-toggle">
             <button type="button" id="btn-view-cal" class="active">Calendário</button>
@@ -156,7 +168,7 @@ tr:hover td{background:var(--page)}
           </div>
         </div>
       </div>
-      <div id="months-container" class="months-wrap"></div>
+      <div class="tl-scroll"><div id="months-container" class="tl-canvas"></div></div>
       <div id="tabela-dias-container" style="display:none;overflow-x:auto">
         <table>
           <thead><tr><th>Data</th><th>Dia</th><th style="text-align:right">Qtd. aulas</th></tr></thead>
@@ -444,6 +456,8 @@ function renderTabelaResumo(grupos){
     const tdDesc = document.createElement('td');
     tdDesc.textContent = g.descricao;
 
+    const tdPontoFocal = document.createElement('td');
+
     const tdTurmas = document.createElement('td');
     tdTurmas.textContent = [...g.turmas].sort().join(', ');
     tdTurmas.style.color = 'var(--text-secondary)';
@@ -453,86 +467,110 @@ function renderTabelaResumo(grupos){
     tdCount.className = 'num';
     tdCount.textContent = g.count;
 
-    tr.append(tdCargo, tdCod, tdDesc, tdTurmas, tdCount);
+    tr.append(tdCargo, tdCod, tdDesc, tdPontoFocal, tdTurmas, tdCount);
     tbody.appendChild(tr);
   });
 }
 
-function bucketClass(count, max){
-  if(count <= 0) return '';
-  const ratio = count / max;
-  if(max <= 1 || count === 1) return 'b1';
-  if(ratio <= 0.34) return 'b2';
-  if(ratio <= 0.67) return 'b3';
-  return 'b4';
-}
+const CARGO_STACK_ORDER = ['EPF','DPF','PCF','PPF'];
+
+const TL_COL_W = 13;
+const TL_BAR_W = 8;
+const TL_MAX_BAR_H = 140;
+const TL_MIN_BAR_H = 12;
+const TL_EMPTY_BAR_H = 3;
+const TL_SEG_GAP = 2;
+const TL_BASE_OFFSET = 38;
 
 function renderCalendario(porDia, inicio, fim){
   const container = document.getElementById('months-container');
   container.innerHTML = '';
 
   const maxCount = Math.max(1, ...[...porDia.values()].map(l => l.length));
+  const totalDays = Math.round((fim - inicio) / 86400000) + 1;
+  container.style.width = (totalDays * TL_COL_W + 8) + 'px';
 
-  const cursor = new Date(inicio.getFullYear(), inicio.getMonth(), 1);
-  const fimMonth = new Date(fim.getFullYear(), fim.getMonth(), 1);
+  const baseline = document.createElement('div');
+  baseline.className = 'tl-baseline';
+  container.appendChild(baseline);
 
-  while(cursor <= fimMonth){
-    const y = cursor.getFullYear(), m = cursor.getMonth();
-    const monthBlock = document.createElement('div');
-    monthBlock.className = 'month-block';
+  let lastMonth = null;
+  for(let i=0; i<totalDays; i++){
+    const date = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate() + i);
+    const x = i * TL_COL_W;
+    const dow = date.getDay();
 
-    const title = document.createElement('div');
-    title.className = 'month-title';
-    title.textContent = MESES_NOME[m] + ' ' + y;
-    monthBlock.appendChild(title);
-
-    const grid = document.createElement('div');
-    grid.className = 'month-grid';
-    DOW.forEach(d => {
-      const dow = document.createElement('div');
-      dow.className = 'dow';
-      dow.textContent = d;
-      grid.appendChild(dow);
-    });
-
-    const firstDay = new Date(y, m, 1);
-    const daysInMonth = new Date(y, m+1, 0).getDate();
-    const leadBlanks = firstDay.getDay();
-
-    for(let i=0;i<leadBlanks;i++){
-      const blank = document.createElement('div');
-      blank.className = 'day-cell empty';
-      grid.appendChild(blank);
+    if(dow === 0 || dow === 6){
+      const wknd = document.createElement('div');
+      wknd.className = 'tl-weekend';
+      wknd.style.left = x + 'px';
+      wknd.style.width = TL_COL_W + 'px';
+      container.appendChild(wknd);
     }
 
-    for(let d=1; d<=daysInMonth; d++){
-      const date = new Date(y, m, d);
-      const iso = toISO(date);
-      const cell = document.createElement('div');
-      cell.textContent = d;
-
-      const inRange = date >= inicio && date <= fim;
-      const sessions = porDia.get(iso) || [];
-
-      if(!inRange){
-        cell.className = 'day-cell out-range';
-      } else if(sessions.length > 0){
-        cell.className = 'day-cell has-data ' + bucketClass(sessions.length, maxCount);
-        cell.tabIndex = 0;
-        cell.addEventListener('pointerenter', e => showTooltip(e, date, sessions));
-        cell.addEventListener('pointermove', e => positionTooltip(e));
-        cell.addEventListener('pointerleave', hideTooltip);
-        cell.addEventListener('focus', e => showTooltip(e, date, sessions));
-        cell.addEventListener('blur', hideTooltip);
-      } else {
-        cell.className = 'day-cell';
+    const monthKey = date.getFullYear() + '-' + date.getMonth();
+    if(monthKey !== lastMonth){
+      lastMonth = monthKey;
+      if(i > 0){
+        const divider = document.createElement('div');
+        divider.className = 'tl-divider';
+        divider.style.left = x + 'px';
+        container.appendChild(divider);
       }
-      grid.appendChild(cell);
+      const label = document.createElement('div');
+      label.className = 'tl-month-label';
+      label.style.left = (x + 3) + 'px';
+      label.textContent = MESES_NOME[date.getMonth()].slice(0,3) + '/' + date.getFullYear();
+      container.appendChild(label);
     }
 
-    monthBlock.appendChild(grid);
-    container.appendChild(monthBlock);
-    cursor.setMonth(cursor.getMonth()+1);
+    const dayLabel = document.createElement('div');
+    dayLabel.className = 'tl-day-label';
+    dayLabel.style.left = x + 'px';
+    dayLabel.style.width = TL_COL_W + 'px';
+    dayLabel.textContent = date.getDate();
+    container.appendChild(dayLabel);
+
+    const iso = toISO(date);
+    const sessions = porDia.get(iso) || [];
+    const count = sessions.length;
+    const left = x + (TL_COL_W - TL_BAR_W) / 2;
+
+    if(count > 0){
+      const totalH = TL_MIN_BAR_H + (TL_MAX_BAR_H - TL_MIN_BAR_H) * (count / maxCount);
+      const porCargo = CARGO_STACK_ORDER.map(cg => ({cg, sess: sessions.filter(s => s.cargo === cg)}))
+        .filter(g => g.sess.length > 0);
+
+      let bottom = 0;
+      porCargo.forEach((g, idx) => {
+        const segH = totalH * (g.sess.length / count);
+        const isTop = idx === porCargo.length - 1;
+        const seg = document.createElement('div');
+        seg.className = 'tl-bar-seg has-data ' + g.cg.toLowerCase();
+        seg.style.left = left + 'px';
+        seg.style.width = TL_BAR_W + 'px';
+        seg.style.bottom = (bottom + TL_BASE_OFFSET) + 'px';
+        seg.style.height = Math.max(1, segH - (isTop ? 0 : TL_SEG_GAP)) + 'px';
+        seg.style.borderRadius = isTop ? '3px 3px 0 0' : '0';
+        seg.tabIndex = 0;
+        seg.addEventListener('pointerenter', e => showTooltip(e, date, sessions));
+        seg.addEventListener('pointermove', e => positionTooltip(e));
+        seg.addEventListener('pointerleave', hideTooltip);
+        seg.addEventListener('focus', e => showTooltip(e, date, sessions));
+        seg.addEventListener('blur', hideTooltip);
+        container.appendChild(seg);
+        bottom += segH;
+      });
+    } else {
+      const bar = document.createElement('div');
+      bar.className = 'tl-bar-seg empty';
+      bar.style.left = left + 'px';
+      bar.style.width = TL_BAR_W + 'px';
+      bar.style.bottom = TL_BASE_OFFSET + 'px';
+      bar.style.height = TL_EMPTY_BAR_H + 'px';
+      bar.style.borderRadius = '3px 3px 0 0';
+      container.appendChild(bar);
+    }
   }
 }
 
@@ -573,12 +611,15 @@ function showTooltip(e, date, sessions){
   sessions.forEach(s => {
     const row = document.createElement('div');
     row.className = 'tooltip-row';
+    const dot = document.createElement('span');
+    dot.className = 'tooltip-dot';
+    dot.style.background = 'var(--' + s.cargo.toLowerCase() + ')';
     const cod = document.createElement('span');
     cod.className = 'tooltip-cod';
     cod.textContent = s.cargo + '-' + s.turma + ' · ' + s.codigo + ' ';
     const desc = document.createElement('span');
     desc.textContent = s.descricao + ' (' + s.horaInicio + '–' + s.horaFim + ')';
-    row.append(cod, desc);
+    row.append(dot, cod, desc);
     tip.appendChild(row);
   });
 
@@ -600,7 +641,7 @@ function hideTooltip(){
 }
 
 document.getElementById('btn-view-cal').onclick = () => {
-  document.getElementById('months-container').style.display = 'flex';
+  document.getElementById('months-container').style.display = 'block';
   document.getElementById('tabela-dias-container').style.display = 'none';
   document.getElementById('btn-view-cal').classList.add('active');
   document.getElementById('btn-view-tbl').classList.remove('active');
