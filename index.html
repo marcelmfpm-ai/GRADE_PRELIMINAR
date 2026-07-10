@@ -7000,20 +7000,20 @@ function markMultiRows() {
       hdr.insertBefore(makeTick(match[0]), titulo);
     });
 
-    // Restaura estado: localStorage > DOM
-    var marcadas = loadSet();
-
-    // Se localStorage vazio, tenta ler valor já no DOM (HTML exportado)
-    if(marcadas.size === 0){
-      var domVal = ((document.getElementById('semana-ref') || {}).textContent || '').trim();
-      if(domVal && domVal !== '—'){
-        domVal.split(',').forEach(function(v){
-          var n = v.trim();
-          if(n) marcadas.add(n);
-        });
-        saveSet(marcadas);
-      }
+    // Restaura estado: DOM (valor salvo/publicado no HTML) > localStorage
+    // O valor no DOM é o que foi commitado no GitHub por qualquer usuário, então
+    // ele deve prevalecer para que a marcação fique sincronizada entre usuários.
+    var domVal = ((document.getElementById('semana-ref') || {}).textContent || '').trim();
+    var domSet = new Set();
+    if(domVal && domVal !== '—'){
+      domVal.split(',').forEach(function(v){
+        var n = v.trim();
+        if(n) domSet.add(n);
+      });
     }
+
+    var marcadas = domSet.size > 0 ? domSet : loadSet();
+    saveSet(marcadas);
 
     updateRef(marcadas);
     document.querySelectorAll('.sem-tick').forEach(function(t){
